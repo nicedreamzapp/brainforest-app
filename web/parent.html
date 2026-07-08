@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Brainforest · Parent Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    /* near-black slate + white text; green is an ACCENT, never a text-on-green pair */
+    background: #14181c; color: #f5f7f6; margin: 0;
+    padding: calc(18px + env(safe-area-inset-top))
+             max(16px, env(safe-area-inset-right))
+             calc(24px + env(safe-area-inset-bottom))
+             max(16px, env(safe-area-inset-left));
+  }
+  h1 { color: #ffffff; margin: 0 0 6px; font-size: clamp(20px, 5.5vw, 30px); }
+  h3 { margin: 0 0 12px; color: #8be5b5; font-size: 16px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .sub { color: #aab8b1; margin: 0 0 16px; font-size: 13px; }
+  .card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+  }
+  .kid-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .kid-tab {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+    color: #f5f7f6; border-radius: 999px; padding: 8px 16px; font-size: 14px;
+    cursor: pointer; font-family: inherit;
+  }
+  .kid-tab.active { background: #ffffff; color: #14181c; font-weight: 700; }
+
+  /* KPI stats: a real grid so every block is even, 3-up on phones */
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (min-width: 700px) { .kpis { grid-template-columns: repeat(6, 1fr); } }
+  .stat {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 12px; padding: 12px 8px; text-align: center; min-width: 0;
+  }
+  .stat .num { font-size: clamp(18px, 5vw, 26px); font-weight: 800; color: #ffffff; line-height: 1.1; overflow-wrap: anywhere; }
+  .stat .lbl { font-size: 10px; color: #9fb0a7; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  /* Mastery: stacked rows, no table — nothing to squish or cut off */
+  .skill-row { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .skill-row:last-child { border-bottom: 0; }
+  .skill-top { display: flex; align-items: center; gap: 10px; }
+  .skill-name { font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .bar { background: rgba(255,255,255,0.10); height: 10px; border-radius: 5px; overflow: hidden; flex: 2; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, #22a877, #7fe8b1); }
+  .pct { font-variant-numeric: tabular-nums; color: #ffffff; width: 44px; text-align: right; font-weight: 700; font-size: 14px; }
+  .skill-sub { font-size: 12px; color: #9fb0a7; margin-top: 4px; }
+
+  .session-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
+  .session-row:last-child { border-bottom: 0; }
+  .session-when { color: #f5f7f6; }
+  .session-meta { color: #9fb0a7; white-space: nowrap; }
+  .empty { color: #9fb0a7; font-size: 13px; padding: 6px 0; }
+  a.back {
+    display: inline-block; margin-top: 6px; color: #7fe8b1; font-weight: 600;
+    text-decoration: none; border: 1px solid rgba(127,232,177,0.4);
+    border-radius: 999px; padding: 10px 18px;
+  }
+</style>
+</head>
+<body>
+<h1>🌳 Brainforest · Parent Dashboard</h1>
+<p class="sub" id="sub">Loading…</p>
+<div class="kid-tabs" id="kid-tabs"></div>
+
+<div class="card"><div class="kpis" id="kpis"></div></div>
+
+<div class="card">
+  <h3>Skill Mastery</h3>
+  <div id="mastery-list"><p class="empty">No practice yet — go play!</p></div>
+</div>
+
+<div class="card">
+  <h3>Recent Sessions</h3>
+  <div id="sessions-list"><p class="empty">No sessions yet.</p></div>
+</div>
+
+<a class="back" href="index.html">← Back to Brainforest</a>
+
+<script src="engine.js?v=bf1"></script>
+<script>
+const kvGet = k => (window.BF ? BF.kv.get(k) : localStorage.getItem(k));
+const kvSet = (k, v) => (window.BF ? BF.kv.set(k, v) : localStorage.setItem(k, v));
+const pretty = s => String(s).replace(/^math_/, "").replace(/_/g, " ")
+  .replace(/\b\w/g, c => c.toUpperCase());
+
+async function buildTabs() {
+  const j = await (await fetch("/api/kids")).json();
+  const tabs = document.getElementById("kid-tabs");
+  const current = kvGet("kid") || (j.kids[0] && j.kids[0].id);
+  tabs.innerHTML = "";
+  j.kids.forEach(k => {
+    const b = document.createElement("button");
+    b.className = "kid-tab" + (k.id === current ? " active" : "");
+    b.textContent = `${k.emoji} ${k.name} · ${k.grade === 0 ? "K" : (k.grade_label || k.grade)}`;
+    b.addEventListener("click", () => { kvSet("kid", k.id); buildTabs(); load(); });
+    tabs.appendChild(b);
+  });
+  const cur = j.kids.find(k => k.id === current);
+  document.getElementById("sub").textContent = cur
+    ? `Showing ${cur.name}. Tap another kid to switch. Everything is stored on this phone only.`
+    : "No kids yet — add one in the app first.";
+}
+
+async function load() {
+  const m = await (await fetch("/api/mastery")).json();
+  const col = await (await fetch("/api/collection")).json();
+  // Fresh install with no kids yet: show a friendly empty state, never crash.
+  const mastery = Array.isArray(m.mastery) ? m.mastery : [];
+  if (col.error) { col.quests_done = 0; }
+  const totalAttempts = mastery.reduce((a, b) => a + b.attempts, 0);
+  const totalCorrect = mastery.reduce((a, b) => a + b.correct, 0);
+  const mastered = mastery.filter(x => x.score >= 0.85).length;
+  document.getElementById("kpis").innerHTML = `
+    <div class="stat"><div class="num">${totalAttempts}</div><div class="lbl">Attempts</div></div>
+    <div class="stat"><div class="num">${totalCorrect}</div><div class="lbl">Correct</div></div>
+    <div class="stat"><div class="num">${totalAttempts ? Math.round(100 * totalCorrect / totalAttempts) : 0}%</div><div class="lbl">Accuracy</div></div>
+    <div class="stat"><div class="num">${mastery.length}</div><div class="lbl">Skills tried</div></div>
+    <div class="stat"><div class="num">${mastered}</div><div class="lbl">Mastered</div></div>
+    <div class="stat"><div class="num">${col.quests_done || 0}</div><div class="lbl">Quests done</div></div>
+  `;
+  const list = document.getElementById("mastery-list");
+  if (mastery.length) {
+    list.innerHTML = "";
+    mastery.sort((a, b) => b.score - a.score).forEach(r => {
+      const pct = Math.round(r.score * 100);
+      const last = r.last_seen ? new Date(r.last_seen).toLocaleDateString() : "—";
+      list.insertAdjacentHTML("beforeend", `
+        <div class="skill-row">
+          <div class="skill-top">
+            <span class="skill-name">${pretty(r.skill)}</span>
+            <div class="bar"><div style="width:${pct}%"></div></div>
+            <span class="pct">${pct}%</span>
+          </div>
+          <div class="skill-sub">${r.correct}/${r.attempts} correct · last practiced ${last}</div>
+        </div>`);
+    });
+  }
+  const sess = await (await fetch("/api/sessions")).json().catch(() => ({}));
+  const sl = document.getElementById("sessions-list");
+  if (sess.sessions && sess.sessions.length) {
+    sl.innerHTML = "";
+    sess.sessions.forEach(s => {
+      const when = new Date(s.started_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      sl.insertAdjacentHTML("beforeend", `
+        <div class="session-row">
+          <span class="session-when">${when}</span>
+          <span class="session-meta">${s.theme || "—"} · ${s.activities_done} activities · ${s.minutes} min</span>
+        </div>`);
+    });
+  }
+}
+
+(async () => { await buildTabs(); await load(); })().catch(e => {
+  document.getElementById("sub").textContent = "Couldn't load data: " + e;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1928 @@
+/* JaneOS — ship-ready, professional but playful UI */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700;800&family=Bubblegum+Sans&family=Outfit:wght@500;600;700;800&display=swap');
+
+:root {
+  --pink-1: #ff3aa1;
+  --pink-2: #ff77d7;
+  --purple-1: #6b4eff;
+  --purple-2: #b86cff;
+  --teal: #00b894;
+  --gold: #f5b800;
+  --sky: #5fc7ff;
+  --ink: #2a1758;
+  --ink-soft: #5b3a7d;
+  --paper: #fffefb;
+  --shadow-soft: 0 12px 40px rgba(107, 78, 255, 0.18);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  color: #2a1758;
+  overflow: hidden;
+  user-select: none;
+}
+body {
+  background: linear-gradient(140deg, #ffd6f5 0%, #c0e7ff 50%, #d6ffe2 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 18s ease-in-out infinite;
+  position: relative;
+}
+@keyframes gradient-shift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* Background is intentionally clean — no floating decorations during lessons.
+   This avoids confusion in counting activities. */
+
+.screen {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1;
+}
+.screen.active { display: flex; animation: screen-in 500ms ease-out; }
+@keyframes screen-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+/* ---------- WELCOME ---------- */
+.big-title {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(58px, 9.2vw, 124px);
+  margin: 0;
+  background: linear-gradient(165deg, #ff3aa1 0%, #b86cff 50%, #6b4eff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-align: center;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 12px rgba(255,58,161,0.25)) drop-shadow(0 14px 28px rgba(107,78,255,0.18));
+  animation: bounce-in 800ms cubic-bezier(.34,1.56,.64,1), title-wiggle 6s ease-in-out 1s infinite;
+}
+@keyframes title-wiggle { 0%,100%{transform: rotate(-1deg);} 50%{transform: rotate(1deg);} }
+.big-sub {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 600;
+  margin: 14px 0 40px;
+  text-align: center;
+  color: var(--ink-soft);
+  letter-spacing: 0.2px;
+  animation: bounce-in 900ms cubic-bezier(.34,1.56,.64,1) 100ms backwards;
+}
+@keyframes bounce-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 920px;
+  z-index: 2;
+}
+@media (max-width: 720px) {
+  .theme-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.theme-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ff 100%);
+  border: 0;
+  border-radius: 28px;
+  padding: 26px 16px 22px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  letter-spacing: 0.2px;
+  box-shadow:
+    0 10px 0 var(--pink-1),
+    0 22px 40px rgba(255,58,161,0.20),
+    inset 0 2px 0 rgba(255,255,255,1),
+    inset 0 -2px 0 rgba(0,0,0,0.04);
+  transition: transform 240ms cubic-bezier(.34,1.56,.64,1), box-shadow 200ms;
+  color: var(--ink);
+  animation: card-pop 600ms cubic-bezier(.34,1.56,.64,1) both;
+}
+.theme-card::after {
+  content: "";
+  position: absolute; inset: 4px;
+  border-radius: 24px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 30%);
+}
+.theme-card:nth-child(1) { animation-delay: 50ms; }
+.theme-card:nth-child(2) { animation-delay: 100ms; box-shadow: 0 8px 0 #00c2c2, 0 14px 28px rgba(0,194,194,0.25); }
+.theme-card:nth-child(3) { animation-delay: 150ms; box-shadow: 0 8px 0 #2bbf60, 0 14px 28px rgba(43,191,96,0.25); }
+.theme-card:nth-child(4) { animation-delay: 200ms; box-shadow: 0 8px 0 #6e4ab8, 0 14px 28px rgba(110,74,184,0.25); }
+.theme-card:nth-child(5) { animation-delay: 250ms; box-shadow: 0 8px 0 #ff8a4d, 0 14px 28px rgba(255,138,77,0.25); }
+.theme-card:nth-child(6) { animation-delay: 300ms; box-shadow: 0 8px 0 #b87a3a, 0 14px 28px rgba(184,122,58,0.25); }
+.theme-card:nth-child(7) { animation-delay: 350ms; box-shadow: 0 8px 0 #4ea8ff, 0 14px 28px rgba(78,168,255,0.25); }
+.theme-card:nth-child(8) { animation-delay: 400ms; box-shadow: 0 8px 0 #f5b800, 0 14px 28px rgba(245,184,0,0.3); }
+@keyframes card-pop { from { transform: scale(0) rotate(-12deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+
+.theme-card:hover { transform: translateY(-4px) scale(1.04); }
+.theme-card:active { transform: translateY(6px); box-shadow: 0 2px 0 currentColor !important; }
+.theme-card .emoji {
+  font-size: 64px; line-height: 1;
+  transition: transform 300ms;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+}
+.theme-card:hover .emoji { animation: wiggle 700ms ease-in-out; }
+@keyframes wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-15deg)} 75%{transform:rotate(15deg)} }
+
+.parent-link {
+  position: fixed; bottom: 12px; right: 12px;
+  background: rgba(0,0,0,0.1);
+  border: 0; border-radius: 999px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2a1758;
+  opacity: 0.55;
+  cursor: pointer;
+  z-index: 5;
+}
+.parent-link:hover { opacity: 1; }
+
+/* ---------- LESSON ---------- */
+.hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 110px 14px 18px;
+  z-index: 5;
+}
+.stickers {
+  display: flex; gap: 6px;
+  font-size: 32px;
+  min-height: 40px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 999px;
+  padding: 4px 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 0 rgba(255,58,161,0.2);
+}
+.stickers:empty { display: none; }
+.sticker-pop { animation: sticker-fly 600ms cubic-bezier(.34,1.56,.64,1); }
+@keyframes sticker-fly {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60%{ transform: scale(1.6) rotate(15deg); opacity: 1; }
+  100%{ transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.break-btn {
+  background: rgba(255,255,255,0.9);
+  border: 3px solid #ff3aa1;
+  color: #ff3aa1;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #ff3aa1;
+}
+.break-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #ff3aa1; }
+
+.stage {
+  width: 100%;
+  max-width: 920px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 130px;
+  justify-content: center;
+  gap: 14px;          /* tighter — bubble sits close to question word */
+  padding: 64px 0;
+  z-index: 2;
+}
+
+.bubble {
+  background: white;
+  border: 0;
+  border-radius: 28px;
+  padding: 22px 32px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 600;
+  text-align: center;
+  max-width: 760px;
+  position: relative;
+  letter-spacing: 0.1px;
+  color: var(--ink);
+  box-shadow:
+    0 0 0 4px rgba(107,78,255,1),
+    0 8px 0 rgba(70,50,163,0.30),
+    0 26px 48px rgba(107,78,255,0.22);
+  animation: bubble-in 400ms cubic-bezier(.34,1.56,.64,1);
+}
+.bubble::after {
+  content: ""; position: absolute; bottom: -18px; left: 64px;
+  width: 0; height: 0;
+  border: 16px solid transparent;
+  border-top-color: #6b4eff;
+  border-bottom: 0;
+  border-left: 0;
+  filter: drop-shadow(0 6px 0 rgba(70,50,163,0.30));
+}
+@keyframes bubble-in { from { transform: translateY(-30px) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.bubble .said { margin: 0; line-height: 1.3; }
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+}
+.content .title-big {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(64px, 13vw, 160px);
+  margin: 0;
+  color: #6b4eff;
+  text-align: center;
+  letter-spacing: -2px;
+  filter: drop-shadow(4px 6px 0 #fff) drop-shadow(0 16px 24px rgba(107,78,255,0.3));
+  animation: title-pop 500ms cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes title-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.content .prompt-line {
+  font-size: clamp(20px, 2.4vw, 26px);
+  margin: 0;
+  text-align: center;
+  color: #5b3a7d;
+}
+.content .scene-emojis {
+  font-size: clamp(56px, 11vw, 110px);
+  text-align: center;
+  letter-spacing: 8px;
+  line-height: 1.1;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.18));
+}
+
+/* Counting activities: enclose the emoji title in a clear card so kid knows
+   "this is what to count" — not the background. */
+.content .title-big.count-card {
+  background: white;
+  border: 5px solid #6b4eff;
+  border-radius: 28px;
+  padding: 30px 40px;
+  font-size: clamp(80px, 14vw, 140px);
+  letter-spacing: 12px;
+  line-height: 1.1;
+  filter: drop-shadow(0 10px 0 rgba(107,78,255,0.25));
+  display: inline-block;
+}
+
+.options {
+  display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+}
+.options button {
+  background: linear-gradient(180deg, #ffffff 0%, #f0fff7 100%);
+  border: 0;
+  border-radius: 22px;
+  padding: 20px 34px;
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: clamp(24px, 2.8vw, 34px);
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 96px;
+  letter-spacing: -0.2px;
+  box-shadow:
+    0 0 0 4px var(--teal),
+    0 8px 0 rgba(0,140,108,0.35),
+    0 18px 26px rgba(0,184,148,0.22);
+  transition: transform 130ms;
+  animation: opt-in 500ms cubic-bezier(.34,1.56,.64,1) both;
+}
+.options button:nth-child(1){animation-delay: 0ms;}
+.options button:nth-child(2){animation-delay: 80ms;}
+.options button:nth-child(3){animation-delay: 160ms;}
+.options button:nth-child(4){animation-delay: 240ms;}
+.options button:nth-child(5){animation-delay: 320ms;}
+@keyframes opt-in { from { transform: translateY(40px) scale(0.7); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.options button:hover { transform: translateY(-3px); }
+.options button:active { transform: translateY(6px); box-shadow: 0 0 0 4px var(--teal), 0 2px 0 rgba(0,140,108,0.35); }
+.options button.right { background: linear-gradient(180deg, #d4ffe2, #a8f0c0); animation: shake-yes 500ms; }
+.options button.wrong {
+  background: linear-gradient(180deg, #ffd4d4, #ffa8a8);
+  box-shadow: 0 0 0 4px #ff5577, 0 8px 0 rgba(176,0,0,0.35), 0 18px 26px rgba(255,80,80,0.25);
+  animation: shake-no 500ms;
+}
+@keyframes shake-yes { 0%,100%{transform: translateY(0) scale(1);} 30%{transform: translateY(-18px) scale(1.1);} 60%{transform: translateY(0) scale(1);} 80%{transform: translateY(-6px) scale(1.05);} }
+@keyframes shake-no { 0%,100%{transform: translateX(0);} 25%{transform: translateX(-12px);} 50%{transform: translateX(12px);} 75%{transform: translateX(-6px);} }
+
+.actions {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: center; align-items: center; gap: 16px;
+  padding: 20px;
+  z-index: 5;
+}
+.repeat-btn, .next-btn {
+  border-radius: 999px;
+  padding: 16px 28px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  transition: transform 100ms;
+}
+.repeat-btn {
+  background: white; color: #5b3a7d; border: 3px solid #5b3a7d;
+  box-shadow: 0 6px 0 #5b3a7d;
+}
+.repeat-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #5b3a7d; }
+.next-btn {
+  background: linear-gradient(180deg, #6b4eff, #4632a3);
+  color: white;
+  box-shadow: 0 6px 0 #4632a3, 0 12px 18px rgba(70,50,163,0.3);
+}
+.next-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #4632a3; }
+
+.hidden { display: none !important; }
+
+/* big visible feedback flash so kid knows right/wrong without audio */
+.fb-flash {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 80;
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(70px, 10vw, 130px);
+  font-weight: 800;
+  padding: 30px 70px;
+  border-radius: 60px;
+  pointer-events: none;
+  animation: fb-pop 1.4s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.fb-yes {
+  background: linear-gradient(180deg, #aef5c0, #4ee08a);
+  color: #0a4a1f;
+  box-shadow: 0 18px 0 rgba(0,140,60,0.4), 0 28px 60px rgba(0,184,148,0.45);
+}
+.fb-no {
+  background: linear-gradient(180deg, #ffd0d0, #ffa8a8);
+  color: #6a0a0a;
+  box-shadow: 0 18px 0 rgba(176,0,0,0.35), 0 28px 60px rgba(255,80,80,0.45);
+  font-size: clamp(36px, 6vw, 64px);
+}
+@keyframes fb-pop {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1.18) rotate(2deg); opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 0; }
+}
+
+/* loading dots */
+.loading-dots { display: flex; gap: 14px; padding: 24px; }
+.loading-dots span { width: 28px; height: 28px; border-radius: 50%; background: #6b4eff; animation: dot-bounce 1.2s infinite ease-in-out; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+.loading-dots span:nth-child(2) { animation-delay: 0.18s; background: #ff3aa1; }
+.loading-dots span:nth-child(3) { animation-delay: 0.36s; background: #00b894; }
+@keyframes dot-bounce { 0%,80%,100% { transform: scale(0.5); opacity: 0.4; } 40% { transform: scale(1.3); opacity: 1; } }
+
+/* trace box */
+.trace-box {
+  width: min(80vw, 440px);
+  height: min(80vw, 440px);
+  background: white;
+  border: 6px dashed #6b4eff;
+  border-radius: 32px;
+  position: relative;
+  touch-action: none;
+  box-shadow: 0 10px 0 rgba(107,78,255,0.2);
+}
+.trace-box .ghost {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: 320px;
+  color: rgba(107,78,255,0.18);
+  font-weight: 900;
+  pointer-events: none;
+}
+.trace-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+
+/* ---------- CELEBRATE ---------- */
+.celebrate {
+  position: fixed; inset: 0; z-index: 100;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.0), rgba(255,210,240,0.85));
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  pointer-events: none;
+}
+.celebrate.show { animation: fade-celeb 1800ms forwards; }
+@keyframes fade-celeb { 0% {opacity:0;} 25% {opacity:1;} 80% {opacity:1;} 100% {opacity:0;} }
+.big-star {
+  font-size: 220px;
+  filter: drop-shadow(0 0 30px gold) drop-shadow(0 16px 32px rgba(245,184,0,0.6));
+  animation: spin-pop 1800ms cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes spin-pop { 0% {transform: scale(0) rotate(-360deg);} 60% {transform: scale(1.3) rotate(20deg);} 100% {transform: scale(1) rotate(0);} }
+#celebrate-text {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: 64px;
+  color: #ff3aa1;
+  margin-top: 10px;
+  filter: drop-shadow(3px 3px 0 white) drop-shadow(0 8px 12px rgba(255,58,161,0.4));
+  animation: pop-text 1500ms cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop-text { 0% {transform: scale(0);} 60% {transform: scale(1.2);} 100% {transform: scale(1);} }
+
+/* confetti canvas — drawn by JS */
+#confetti { position: fixed; inset: 0; z-index: 99; pointer-events: none; }
+
+/* modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
+.modal-card { background: white; border-radius: 28px; padding: 36px; max-width: 420px; width: 90%; }
+.modal-card h2 { margin-top: 0; color: #ff3aa1; font-family: 'Bubblegum Sans', cursive; font-size: 36px; }
+.modal-card input { width: 100%; padding: 14px; font-size: 22px; border: 3px solid #ccc; border-radius: 14px; font-family: inherit; margin-bottom: 18px; font-weight: 600; }
+.modal-card button { width: 100%; padding: 16px; font-size: 24px; background: #ff3aa1; color: white; border: 0; border-radius: 14px; cursor: pointer; font-family: inherit; font-weight: 700; }
+
+/* ---------- THEMES ---------- */
+body.theme-unicorns { background: linear-gradient(140deg, #ffd6f5, #e0c0ff, #c0e7ff); }
+body.theme-mermaids { background: linear-gradient(140deg, #c0f7ff, #80e0ff, #5fc7ff); }
+body.theme-dinos    { background: linear-gradient(140deg, #d6ffd0, #a8e6a3, #6ec06b); }
+body.theme-space    { background: linear-gradient(140deg, #1a1f4a, #4a3580, #6e4ab8); color: #fff; }
+body.theme-space .big-title, body.theme-space .content .title-big { color: #ffd166; filter: drop-shadow(4px 6px 0 #1a1f4a); }
+body.theme-space .bubble { background: rgba(255,255,255,0.95); }
+body.theme-cats     { background: linear-gradient(140deg, #fff0d6, #ffd6a5, #ffb086); }
+body.theme-horses   { background: linear-gradient(140deg, #ffe8c0, #d4b58a, #a78256); }
+body.theme-bluey    { background: linear-gradient(140deg, #c0e7ff, #80c8ff, #4ea8ff); }
+
+/* ============================================================
+   Voice toggle — big playful side button.
+   Tap to mute/unmute the tutor's voice. State persists.
+   ============================================================ */
+.voice-toggle {
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  z-index: 1000;
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: linear-gradient(135deg, var(--pink-2) 0%, var(--purple-2) 60%, var(--purple-1) 100%);
+  box-shadow:
+    0 12px 32px rgba(107, 78, 255, 0.45),
+    0 0 0 4px rgba(255, 255, 255, 0.55),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.18),
+    inset 0 10px 18px rgba(255, 255, 255, 0.45);
+  color: #fff;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  animation: vt-float 3s ease-in-out infinite;
+}
+.voice-toggle:hover { transform: scale(1.06); }
+.voice-toggle:active { transform: scale(0.94); }
+.voice-toggle .vt-emoji {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+}
+.voice-toggle .vt-label {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  margin-top: 1px;
+}
+@keyframes vt-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(-2deg); }
+}
+
+/* Off state — drained color, dim, slightly tilted */
+.voice-toggle.voice-off {
+  background: linear-gradient(135deg, #c8c4d4 0%, #8a829e 100%);
+  filter: grayscale(0.35);
+  box-shadow:
+    0 8px 22px rgba(120, 110, 140, 0.35),
+    0 0 0 4px rgba(255, 255, 255, 0.45),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.18);
+  animation: none;
+}
+.voice-toggle.voice-off .vt-emoji { transform: rotate(-8deg); }
+
+/* Pulse when actively speaking (added by JS while audio plays) */
+.voice-toggle.speaking::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.55);
+  animation: vt-pulse 0.9s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes vt-pulse {
+  0%   { transform: scale(0.95); opacity: 0.85; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* ============================================================
+   Mobile polish — phones (<= 540px)
+   Goal: every button visible + tappable, nothing covered by the
+   floating voice toggle, content fits with breathing room.
+   ============================================================ */
+@media (max-width: 540px) {
+  /* Voice toggle moves to BOTTOM-LEFT, smaller, out of the answer area */
+  .voice-toggle {
+    width: 64px; height: 64px;
+    right: auto;
+    left: 14px;
+    top: auto;
+    bottom: 18px;
+    transform: none;
+    border-width: 3px;
+    animation: none;
+  }
+  .voice-toggle:hover, .voice-toggle:active { transform: scale(0.96); }
+  .voice-toggle .vt-emoji { font-size: 26px; }
+  .voice-toggle .vt-label { font-size: 9px; letter-spacing: 0.8px; }
+
+  /* HUD shrinks */
+  .hud { padding: 10px 12px; }
+  .break-btn { padding: 8px 14px; font-size: 14px; }
+
+  /* Welcome / theme picker */
+  .big-title { font-size: clamp(28px, 9vw, 40px); margin: 8px 0; }
+  .big-sub { font-size: clamp(15px, 4.5vw, 20px); margin: 0 0 14px; }
+  .theme-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 14px; }
+  .theme-card {
+    padding: 18px 10px 16px;
+    border-radius: 22px;
+    font-size: 15px;
+    gap: 8px;
+  }
+  .theme-card .emoji { font-size: 44px; }
+
+  /* Stage gives room for fixed actions footer + voice toggle */
+  .stage { padding: 60px 14px 130px; }
+  .bubble { padding: 14px 18px; font-size: 16px; border-radius: 20px; }
+  .bubble::after { left: 32px; border-width: 12px; bottom: -14px; }
+
+  /* Answer buttons — fit 4 across narrow phones */
+  .options { gap: 10px; padding: 0 8px; }
+  .options button {
+    padding: 14px 18px;
+    font-size: clamp(18px, 5.5vw, 24px);
+    min-width: 64px;
+    border-radius: 18px;
+  }
+
+  /* Actions footer shrinks; right-padded so voice toggle never covers buttons */
+  .actions { padding: 12px 14px 14px 90px; gap: 10px; flex-wrap: wrap; }
+  .repeat-btn, .next-btn {
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+
+  /* Parent dashboard link */
+  .parent-link { font-size: 12px; padding: 6px 10px; }
+
+  /* Modal */
+  .modal-card { padding: 24px 20px; border-radius: 22px; }
+}
+
+/* Extra tight: very small phones (<= 380px) */
+@media (max-width: 380px) {
+  .theme-card { padding: 14px 6px 12px; font-size: 13px; }
+  .theme-card .emoji { font-size: 38px; }
+  .options button { padding: 12px 12px; font-size: 18px; min-width: 54px; }
+  .voice-toggle { width: 56px; height: 56px; }
+  .voice-toggle .vt-emoji { font-size: 22px; }
+  .voice-toggle .vt-label { font-size: 8px; }
+}
+
+.trace-actions { display: flex; justify-content: center; margin-top: 18px; }
+.done-btn {
+  background: #2bbf60; color: #fff; border: 0; border-radius: 999px;
+  padding: 14px 32px; font-family: inherit; font-weight: 800; font-size: 22px;
+  box-shadow: 0 6px 0 #1f8c45, 0 12px 24px rgba(43,191,96,0.3);
+  cursor: pointer; transition: transform 0.12s, box-shadow 0.12s;
+}
+.done-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 0 #1f8c45, 0 14px 28px rgba(43,191,96,0.35); }
+.done-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #1f8c45; }
+.done-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: 0 4px 0 #1f8c45; }
+
+
+/* === SAY-AGAIN moved to bottom-left corner so it cannot overlap content === */
+.actions {
+  /* Footer now only carries the next-btn (centered, shows after grading). */
+  padding: 20px 20px 24px 20px;
+}
+.actions .repeat-btn {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 26px;
+  z-index: 998;
+  box-shadow: 0 6px 0 #5b3a7d, 0 12px 24px rgba(107,78,255,0.35);
+}
+.actions .repeat-btn::after {
+  content: "";
+}
+@media (max-width: 540px) {
+  .actions .repeat-btn { width: 54px; height: 54px; font-size: 22px; bottom: 14px; left: 14px; }
+}
+
+/* === Inline option speaker — speaker zone on left of each answer button === */
+.option-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0;
+  padding-left: 0 !important;
+  overflow: visible;          /* NEVER clip text — let JS auto-shrink + wrap handle long answers */
+  min-height: 64px;           /* room for wrapped 2-line text */
+}
+.option-btn .option-speaker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  align-self: stretch;
+  padding: 0 14px;
+  font-size: 18px;
+  background: linear-gradient(180deg, rgba(107,78,255,0.10), rgba(107,78,255,0.18));
+  color: #6b4eff;
+  border-right: 2px dashed rgba(107,78,255,0.35);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, transform 0.1s;
+}
+.option-btn .option-speaker:hover { background: rgba(107,78,255,0.25); }
+.option-btn .option-speaker:active { transform: scale(0.92); }
+.option-btn .option-speaker.speaking {
+  background: linear-gradient(180deg, #ffd166, #ff8a4d);
+  color: #fff;
+  animation: speaker-pulse-inline 0.7s ease-in-out infinite;
+}
+@keyframes speaker-pulse-inline {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.2); }
+}
+.option-btn .option-label {
+  flex: 1 1 auto;
+  min-width: 0;               /* lets flex item shrink past min-content */
+  text-align: center;
+  padding: 8px 12px;
+  font-size: clamp(15px, 1.6vw, 24px);
+  line-height: 1.15;
+  white-space: normal;        /* wraps between words */
+  word-break: keep-all;       /* never split inside a word */
+  overflow-wrap: normal;      /* don't shred long words — JS auto-shrinks instead */
+  hyphens: none;
+}
+@media (max-width: 540px) {
+  .option-btn .option-speaker { padding: 0 10px; font-size: 16px; }
+  .option-btn .option-label { padding: 8px 10px; font-size: clamp(14px, 4vw, 18px); }
+}
+
+/* ==========================================================
+   v3 LAYOUT FIX — three-row grid for lesson, dedicated zones,
+   no overlapping floats. Works phone→desktop.
+   ========================================================== */
+
+#lesson.screen.active {
+  display: grid !important;
+  grid-template-rows: auto 1fr auto;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: 0 !important;
+  inset: 0;
+}
+
+#lesson .hud {
+  position: static !important;
+  padding: 14px 110px 14px 18px;
+  z-index: 5;
+}
+
+#lesson .stage {
+  padding: 90px 18px 0 18px;     /* reserve space at top so toast never sits on the bubble */
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+@media (max-width: 540px) {
+  #lesson .stage { padding-top: 80px; }
+}
+
+#lesson .actions {
+  position: static !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 18px calc(16px + env(safe-area-inset-bottom)) 18px;
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(107,78,255,0.18);
+}
+
+#lesson .actions .repeat-btn {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 999px !important;
+  padding: 12px 22px !important;
+  font-size: 16px !important;
+  box-shadow: 0 4px 0 #5b3a7d !important;
+}
+
+.stage { padding-bottom: 0 !important; }
+
+#lesson .options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 14px;
+  max-width: 860px;
+  margin: 14px auto 0;
+  width: 100%;
+}
+#lesson .options .option-btn {
+  flex: 0 1 auto;            /* size to content, never larger than needed */
+  min-width: 96px;
+  max-width: 100%;
+}
+
+@media (max-width: 540px) {
+  #lesson .hud { padding: 10px 88px 10px 12px; }
+  #lesson .stage { padding: 10px 12px 0 12px; }
+  #lesson .actions { gap: 10px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)) 12px; }
+  #lesson .actions .repeat-btn { padding: 10px 16px !important; font-size: 14px !important; }
+  #lesson .options { gap: 10px; }
+  #lesson .options .option-btn { min-width: 80px; }
+}
+
+/* ===== Kid picker (multi-kid: Jane g1 + Liv g3) ===== */
+#kid-picker {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 18px;
+  gap: 28px;
+}
+#kid-picker.active { display: flex; }
+#kid-picker .big-title {
+  font-size: clamp(40px, 7vw, 72px);
+  margin: 0 0 18px;
+}
+.kid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px;
+  max-width: 760px;
+  width: 100%;
+}
+.kid-card {
+  --kid-color: #ff3aa1;
+  background: white;
+  border: 4px solid var(--kid-color);
+  border-radius: 28px;
+  padding: 26px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  box-shadow: 0 8px 0 rgba(0,0,0,0.08);
+}
+.kid-card:hover, .kid-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 11px 0 rgba(0,0,0,0.10);
+  outline: none;
+}
+.kid-card:active { transform: translateY(0); box-shadow: 0 4px 0 rgba(0,0,0,0.10); }
+.kid-emoji { font-size: 64px; line-height: 1; }
+.kid-name { font-size: 28px; font-weight: 800; color: var(--kid-color); }
+.kid-grade { font-size: 16px; color: #555; }
+
+/* Switch-kid button on welcome screen */
+.switch-kid-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid #bbb;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #444;
+  cursor: pointer;
+  z-index: 50;
+}
+.switch-kid-btn:hover { background: white; }
+
+/* Per-kid body palette accents */
+body.kid-liv { /* slightly cooler accent for 3rd grader */ }
+body.kid-liv .big-title { color: #6b4eff; }
+body.kid-jane .big-title { color: #ff3aa1; }
+
+/* ===== Question visual layer — emoji diagrams under the title ===== */
+.question-visual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 4px auto 0;
+  max-width: 760px;
+  padding: 0 8px;
+}
+.v-emoji-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.55);
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(107,78,255,0.08);
+}
+.v-emoji-group.v-group {
+  border: 2px dashed rgba(107,78,255,0.32);
+}
+.v-emoji {
+  font-size: clamp(22px, 3.2vw, 36px);
+  line-height: 1;
+  animation: v-pop 380ms cubic-bezier(.34,1.56,.64,1) both;
+  display: inline-block;
+}
+.v-emoji.v-strike {
+  position: relative;
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+.v-emoji.v-strike::after {
+  content: "";
+  position: absolute;
+  left: 6%; right: 6%; top: 50%;
+  height: 4px;
+  background: #ff3aa1;
+  border-radius: 2px;
+  transform: translateY(-50%) rotate(-12deg);
+}
+.v-op {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  color: #6b4eff;
+}
+.v-sight-icon {
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1;
+}
+@keyframes v-pop {
+  from { transform: scale(0.5) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);    opacity: 1; }
+}
+/* Tally dots (skip-counting sequences, ones digits in place-value) */
+.v-emoji-group.v-tally .v-emoji,
+.v-emoji-group.v-ones .v-emoji {
+  font-size: clamp(10px, 1.4vw, 14px);
+  color: #6b4eff;
+  line-height: 1;
+}
+.v-emoji-group.v-tally,
+.v-emoji-group.v-ones {
+  background: rgba(107,78,255,0.07);
+  border: 1px solid rgba(107,78,255,0.18);
+}
+
+/* Ten-frame: 5x2 grid of dots — instant "ten" recognition */
+.v-tenframe {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: rgba(255,255,255,0.7);
+  border: 2px solid rgba(107,78,255,0.25);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(107,78,255,0.08);
+}
+.v-tenframe .v-dot {
+  width: clamp(10px, 1.6vw, 16px);
+  height: clamp(10px, 1.6vw, 16px);
+  background: linear-gradient(135deg, #6b4eff, #ff3aa1);
+  border-radius: 50%;
+  animation: v-pop 380ms cubic-bezier(.34,1.56,.64,1) both;
+}
+
+@media (max-width: 540px) {
+  .question-visual { gap: 8px; }
+  .v-emoji-group { padding: 6px 8px; gap: 2px; }
+  .v-tenframe { gap: 3px; padding: 6px; }
+}
+
+/* ===== Did-you-know fact card =====
+   Anchored BELOW the header (which contains break/voice/reward buttons) so it
+   shares no horizontal band with any header control. */
+.fact-toast {
+  position: fixed;
+  top: 84px;                 /* clears the ~74px header + 10px breathing room */
+  left: 50%;
+  transform: translate(-50%, -200%);
+  background: linear-gradient(120deg, #6b4eff, #ff3aa1);
+  color: white;
+  border-radius: 18px;
+  padding: 10px 18px;
+  font-size: clamp(13px, 1.3vw, 17px);
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  z-index: 70;
+  max-width: min(560px, 88vw);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .2s ease;
+}
+.fact-toast.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+.fact-toast.hidden { display: none; }
+.fact-toast .fact-label {
+  flex: 0 0 auto;
+  font-weight: 800;
+  background: rgba(255,255,255,0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+@media (max-width: 540px) {
+  .fact-toast { top: 68px; padding: 8px 14px; font-size: 12px; max-width: 92vw; }
+  .fact-toast .fact-label { font-size: 9px; padding: 2px 8px; }
+}
+
+/* When toast is visible, push the stage further down so the bubble doesn't
+   tuck under the toast either. */
+body:has(.fact-toast.show) #lesson .stage { padding-top: 150px; }
+@media (max-width: 540px) {
+  body:has(.fact-toast.show) #lesson .stage { padding-top: 130px; }
+}
+
+/* === Auto-size lesson content so the WHOLE activity fits the viewport, no scroll === */
+/* The stage owns vertical space — header + bubble + content + actions in column. */
+#lesson.screen.active { padding-bottom: 0; }
+#lesson .stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+#lesson .content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: center;
+}
+/* Cap the giant title on tall/short viewports so options never get pushed off-screen.
+   Use vmin so the cap scales with the SHORTER dimension. */
+.content .title-big {
+  font-size: clamp(40px, min(11vw, 11vh), 120px) !important;
+  line-height: 1.05;
+  max-width: 92vw;
+}
+/* Reading-comp paragraphs render as readable BODY text, not a giant headline. */
+.content .title-big.paragraph {
+  font-family: 'Outfit', system-ui, sans-serif !important;
+  font-size: clamp(16px, min(2.4vw, 3vh), 24px) !important;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.45;
+  max-width: min(760px, 92vw);
+  text-align: left;
+  background: white;
+  border-radius: 18px;
+  padding: 16px 22px;
+  color: #2a1e4a;
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.10));
+  animation: none;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+/* Smaller option buttons on tight viewports so 4 choices fit on one row. */
+@media (max-height: 760px) {
+  .options button { padding: 14px 22px; font-size: clamp(18px, 2.2vw, 26px); }
+  .content { gap: 14px; }
+  .bubble .said { font-size: clamp(16px, 2vw, 22px); }
+}
+@media (max-height: 580px) {
+  .content .title-big { font-size: clamp(32px, 8vh, 72px) !important; }
+  .content .title-big.paragraph { font-size: clamp(14px, 2.4vh, 18px) !important; padding: 12px 16px; max-height: 36vh; }
+  .options button { padding: 10px 18px; font-size: clamp(16px, 1.8vw, 22px); }
+}
+
+/* ============================================================
+   Learning Path / world map  (added 2026-06-10)
+   ============================================================ */
+.path-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 4px auto 18px; padding: 14px 26px;
+  font-family: 'Bubblegum Sans', cursive; font-size: 24px;
+  color: #fff; background: linear-gradient(135deg, var(--purple-1), var(--pink-1));
+  border: 0; border-radius: 999px; cursor: pointer;
+  box-shadow: 0 8px 0 rgba(107,78,255,.35), var(--shadow-soft);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.path-cta:hover { transform: translateY(-2px); }
+.path-cta:active { transform: translateY(3px); box-shadow: 0 4px 0 rgba(107,78,255,.35); }
+
+#path.screen { justify-content: flex-start; padding-top: 56px; overflow-y: auto; }
+#path .big-title { margin: 4px 0 10px; }
+
+.path-progress { width: min(640px, 92vw); margin: 0 auto 22px; }
+.path-progress-bar {
+  height: 18px; background: rgba(107,78,255,.15);
+  border-radius: 999px; overflow: hidden; border: 2px solid rgba(107,78,255,.25);
+}
+.path-progress-bar span {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+  border-radius: 999px; transition: width .8s cubic-bezier(.2,.8,.2,1);
+}
+.path-progress-label {
+  margin: 8px 0 0; text-align: center; font-weight: 700;
+  font-family: 'Outfit', system-ui, sans-serif; color: var(--ink-soft);
+}
+
+.path-map { width: min(720px, 94vw); margin: 0 auto; padding-bottom: 40px; }
+.path-empty { text-align: center; color: var(--ink-soft); font-weight: 700; }
+
+.path-land { margin-bottom: 26px; }
+.path-land-title {
+  font-family: 'Bubblegum Sans', cursive; font-size: 26px;
+  color: var(--purple-1); margin: 0 0 12px; text-align: left;
+}
+.path-trail {
+  display: flex; flex-wrap: wrap; gap: 18px 22px;
+  position: relative; padding-left: 6px;
+}
+
+.path-island {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 104px; padding: 6px; border: 0; background: transparent;
+  cursor: pointer; font-family: inherit;
+  transition: transform .12s ease;
+}
+.path-island:hover { transform: translateY(-3px) scale(1.03); }
+.path-island:active { transform: translateY(1px) scale(.98); }
+
+/* progress ring driven by --pct (0-100) */
+.island-ring {
+  position: relative; width: 80px; height: 80px; border-radius: 50%;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(closest-side, var(--paper) 72%, transparent 73% 100%),
+    conic-gradient(var(--teal) calc(var(--pct,0) * 1%), rgba(107,78,255,.16) 0);
+  box-shadow: var(--shadow-soft);
+}
+.island-face {
+  font-size: 34px; line-height: 1;
+  width: 58px; height: 58px; border-radius: 50%;
+  display: grid; place-items: center; background: #fff;
+}
+.island-star {
+  position: absolute; top: -6px; right: -4px; font-size: 26px;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  animation: island-pop .5s ease-out;
+}
+@keyframes island-pop { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+.island-name {
+  font-family: 'Outfit', system-ui, sans-serif; font-weight: 800;
+  font-size: 15px; color: var(--ink); text-align: center; line-height: 1.05;
+}
+.island-sub {
+  font-family: 'Outfit', system-ui, sans-serif; font-weight: 700;
+  font-size: 12px; color: var(--ink-soft);
+}
+
+/* status flavors */
+.path-island.is-new .island-ring { opacity: .92; }
+.path-island.is-new .island-sub { color: var(--pink-1); }
+.path-island.is-mastered .island-ring {
+  background:
+    radial-gradient(closest-side, var(--paper) 72%, transparent 73% 100%),
+    conic-gradient(var(--gold) 100%, var(--gold) 0);
+}
+.path-island.is-mastered .island-sub { color: var(--gold); }
+.path-island.is-mastered .island-face { background: #fffdf2; }
+
+@media (max-width: 560px) {
+  .path-trail { gap: 14px; justify-content: center; }
+  .path-island { width: 92px; }
+  .island-ring { width: 72px; height: 72px; }
+  .island-face { width: 52px; height: 52px; font-size: 30px; }
+}
+
+/* ============================================================
+   Quest backdrop + treehouse climb + sticker book  (2026-06-11)
+   ============================================================ */
+
+/* Themed treehouse art behind the lesson. Soft-washed so the question and
+   options stay fully readable on top of it. */
+.backdrop {
+  position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 800ms ease;
+  pointer-events: none;
+}
+.backdrop.show { opacity: 1; }
+.backdrop::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.4) 40%, rgba(255,255,255,0.62));
+}
+#lesson .hud, #lesson .stage, #lesson .actions { position: relative; }
+#lesson .actions { z-index: 2; }
+
+/* The climb: one stone per activity, theme-emoji climber, treehouse at the end */
+.quest-trail {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 0 rgba(107,78,255,0.25), 0 8px 18px rgba(107,78,255,0.18);
+}
+.quest-stone {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #e3dcff;
+  box-shadow: inset 0 2px 3px rgba(70,50,163,0.25);
+  transition: background 300ms ease, transform 300ms ease;
+}
+.quest-stone.done {
+  background: linear-gradient(180deg, #ffd166, #f5b800);
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(245,184,0,0.7);
+}
+.quest-climber {
+  font-size: 24px; line-height: 1;
+  animation: climber-hop 500ms cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes climber-hop { 0% { transform: translateY(10px) scale(0.6); } 60% { transform: translateY(-6px) scale(1.15); } 100% { transform: translateY(0) scale(1); } }
+.quest-flag { font-size: 22px; line-height: 1; }
+
+/* Quest finale overlay */
+.finale {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at center, rgba(107,78,255,0.25), rgba(50,30,110,0.78));
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+.finale.show { animation: screen-in 500ms ease-out; }
+.finale-card {
+  background: white; border-radius: 36px;
+  padding: 44px 60px; text-align: center;
+  box-shadow: 0 0 0 6px #ffd166, 0 14px 0 rgba(180,120,0,0.35), 0 40px 80px rgba(0,0,0,0.35);
+  animation: bounce-in 600ms cubic-bezier(.34,1.56,.64,1);
+}
+.finale-title {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(36px, 6vw, 56px);
+  margin: 0 0 8px; color: #6b4eff;
+  filter: drop-shadow(2px 3px 0 #ffd166);
+}
+.finale-treasure {
+  font-size: clamp(90px, 16vw, 150px); line-height: 1.1;
+  animation: spin-pop 1200ms cubic-bezier(.34,1.56,.64,1);
+  filter: drop-shadow(0 0 24px gold);
+}
+.finale-treasure-name {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(26px, 4vw, 38px);
+  margin: 4px 0 2px; color: #ff3aa1;
+}
+.finale-sub {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 18px; font-weight: 600; color: #555; margin: 6px 0 0;
+}
+.finale-tap {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 14px; color: #999; margin: 18px 0 0;
+  animation: dot-bounce 2s infinite ease-in-out;
+}
+
+/* Reveal the correct option after the second miss */
+.options button.reveal {
+  background: linear-gradient(180deg, #d4ffe2, #a8f0c0);
+  box-shadow: 0 0 0 5px #2bbf60, 0 8px 0 rgba(0,140,108,0.35), 0 0 24px rgba(43,191,96,0.65);
+  animation: shake-yes 700ms;
+}
+
+/* Welcome CTA row + sticker book */
+.cta-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.book-cta { background: linear-gradient(135deg, #f5b800, #ff8a4d); box-shadow: 0 8px 0 rgba(184,122,58,.4), var(--shadow-soft); }
+.book-cta:active { box-shadow: 0 4px 0 rgba(184,122,58,.4); }
+
+#stickerbook.screen { justify-content: flex-start; padding-top: 56px; overflow-y: auto; }
+.book-body { width: min(760px, 94vw); margin: 0 auto; padding-bottom: 40px; }
+.book-counts {
+  text-align: center; font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 700; font-size: 18px; color: #6b4eff;
+  background: rgba(255,255,255,0.85); border-radius: 999px;
+  padding: 8px 18px; width: fit-content; margin: 0 auto 18px;
+  box-shadow: 0 4px 0 rgba(107,78,255,0.2);
+}
+.book-section-title {
+  font-family: 'Bubblegum Sans', cursive; font-size: 30px;
+  color: #6b4eff; margin: 18px 0 10px; text-align: center;
+  filter: drop-shadow(2px 2px 0 #fff);
+}
+.book-grid {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+}
+.book-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: white; border-radius: 20px; padding: 14px 18px;
+  min-width: 86px;
+  box-shadow: 0 6px 0 rgba(107,78,255,0.18), 0 12px 24px rgba(107,78,255,0.12);
+  animation: card-pop 400ms cubic-bezier(.34,1.56,.64,1) backwards;
+}
+.book-card.treasure { box-shadow: 0 6px 0 rgba(245,184,0,0.45), 0 12px 24px rgba(245,184,0,0.25); }
+.book-emoji { font-size: 44px; line-height: 1.15; }
+.book-name {
+  font-family: 'Bubblegum Sans', cursive; font-size: 17px; color: #b8860b;
+  text-align: center;
+}
+.book-count {
+  font-family: 'Outfit', system-ui, sans-serif; font-weight: 700;
+  font-size: 14px; color: #888;
+}
+.book-empty {
+  font-family: 'Outfit', system-ui, sans-serif; font-weight: 600;
+  color: #777; text-align: center; padding: 10px;
+}
+
+@media (max-width: 720px) {
+  .quest-trail { padding: 6px 10px; gap: 4px; }
+  .quest-stone { width: 10px; height: 10px; }
+  .quest-climber { font-size: 19px; }
+  .quest-flag { font-size: 17px; }
+  .finale-card { padding: 30px 26px; }
+}
+
+/* ===== Brainforest additions ===== */
+
+/* iPhone notch / home-indicator safe areas.
+   Screens are position:fixed to the physical viewport (viewport-fit=cover),
+   so insets must live on the screens themselves — body padding does nothing. */
+.screen {
+  padding: calc(20px + env(safe-area-inset-top))
+           max(20px, env(safe-area-inset-right))
+           calc(20px + env(safe-area-inset-bottom))
+           max(20px, env(safe-area-inset-left));
+}
+.hud {
+  padding-top: calc(10px + env(safe-area-inset-top));
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(110px, calc(env(safe-area-inset-right) + 96px));
+}
+/* Desktop/tablet: voice toggle stays top-right, nudged below any notch */
+@media (min-width: 541px) {
+  .voice-toggle { top: calc(14px + env(safe-area-inset-top)); }
+}
+/* Phones: keep the base stylesheet's bottom-left placement, lifted above the
+   home indicator. (An earlier unscoped top override put this button on the
+   camera — never regress it back to `top` on small screens.) */
+@media (max-width: 540px) {
+  .voice-toggle { top: auto; bottom: calc(18px + env(safe-area-inset-bottom)); left: max(14px, env(safe-area-inset-left)); }
+}
+/* Top-left pill buttons (switch kid / back): below the camera, off the corner */
+.switch-kid-btn {
+  top: calc(14px + env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
+}
+/* Lesson HUD + answer buttons: real side breathing room on phones */
+@media (max-width: 540px) {
+  #lesson .hud { padding: calc(8px + env(safe-area-inset-top)) 14px 8px max(14px, env(safe-area-inset-left)); }
+  #lesson .stage { padding: 10px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+  #lesson .options { padding: 0 4px; gap: 12px; }
+  #lesson .options .option-btn { max-width: calc(100vw - 40px); }
+}
+
+/* ===== Landscape: everything stays neat when the phone is sideways =====
+   Short viewports (phone landscape): shrink the header art, tighten grids,
+   and use the extra width instead of the missing height. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .big-title { font-size: clamp(30px, 7vh, 48px); }
+  .big-sub { font-size: 16px; margin: 4px 0 10px; }
+  .screen { justify-content: flex-start; overflow-y: auto; }
+  .theme-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 10px; max-width: 92vw; }
+  .theme-card { padding: 10px 8px 8px; font-size: 13px; }
+  .theme-card .emoji { font-size: 34px; }
+  .kid-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .kid-card { min-width: 180px; padding: 12px 18px; }
+  .kid-emoji { font-size: 40px; }
+  .kid-name { font-size: 22px; }
+  .cta-row { flex-direction: row !important; gap: 10px; }
+  #lesson .stage { padding-top: 6px; }
+  .title-big { font-size: clamp(28px, 9vh, 54px) !important; margin: 2px 0; }
+  .options button { padding: 10px 18px; font-size: clamp(16px, 5vh, 24px); }
+  .option-btn { min-height: 48px; }
+  .bubble { max-width: 70vw; }
+  .said { font-size: 15px; }
+  /* voice toggle: bottom-left still works in landscape; lift for home bar */
+  .voice-toggle { width: 54px; height: 54px; bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .voice-toggle .vt-emoji { font-size: 20px; }
+  .path-map { max-width: 94vw; }
+}
+
+/* Add-a-kid card */
+.add-kid-card { opacity: 0.85; border-style: dashed !important; }
+
+/* Grade picker in the add-kid modal */
+.grade-row { display: flex; gap: 8px; justify-content: center; margin: 10px 0 16px; }
+.grade-btn {
+  min-width: 48px; padding: 12px 10px; font-size: 20px; font-weight: 800;
+  border-radius: 14px; border: 3px solid rgba(0,0,0,0.15);
+  background: #fff; cursor: pointer;
+}
+.grade-btn.selected { border-color: #ff3aa1; background: #ffe3f2; transform: scale(1.08); }
+.modal-cancel {
+  display: block; margin: 10px auto 0; background: none; border: none;
+  font-size: 15px; opacity: 0.6; text-decoration: underline; cursor: pointer;
+}
+
+/* ===== Brainforest neutral palette (overrides the pink JaneOS chrome) =====
+   Forest greens + teal + sky + warm sand. Per-kid accent colors still apply
+   to kid cards, so each kid's world keeps its own personality. */
+:root { --pink-1: #1fa06b; --pink-2: #5fd3a2; }
+body { background: linear-gradient(140deg, #d7f2dc 0%, #c9e9ff 55%, #f6efd2 100%); }
+.big-title {
+  background: linear-gradient(165deg, #1fa06b 0%, #16988f 55%, #2f7bd9 100%);
+  -webkit-background-clip: text; background-clip: text;
+}
+.break-btn { border-color: #16988f; color: #16988f; box-shadow: 0 4px 0 #16988f; }
+.break-btn:active { box-shadow: 0 1px 0 #16988f; }
+#celebrate-text { color: #1fa06b; filter: drop-shadow(3px 3px 0 white) drop-shadow(0 8px 12px rgba(31,160,107,0.4)); }
+.celebrate { background: radial-gradient(circle at center, rgba(255,255,255,0.0), rgba(214,244,224,0.85)); }
+.loading-dots span:nth-child(2) { background: #1fa06b; }
+.grade-btn.selected { border-color: #1fa06b; background: #e2f8ec; }
+/* Forest buttons: keep purple only as a deep-woods accent, lead with green */
+.next-btn { background: linear-gradient(180deg, #22a877, #157a56); box-shadow: 0 6px 0 #157a56, 0 12px 18px rgba(21,122,86,0.3); }
+.next-btn:active { box-shadow: 0 2px 0 #157a56; }
+.path-cta { background: linear-gradient(180deg, #22a877, #157a56) !important; box-shadow: 0 6px 0 #0f5c41, 0 12px 18px rgba(21,122,86,0.3) !important; }
+
+/* Add-a-kid modal: forest palette (the base modal buttons were hot pink) */
+#addkid .modal-card h2 { color: #1fa06b; }
+#addkid .grade-btn { background: #fff; border-color: rgba(0,0,0,0.15); color: #23405a; }
+#addkid .grade-btn.selected { border-color: #1fa06b; background: #e2f8ec; color: #157a56; }
+#addkid #addkid-save { background: linear-gradient(180deg, #22a877, #157a56); color: #fff; }
+#addkid .modal-cancel { background: none; color: #557; }
+
+/* Scrolling screens (path, sticker book): title clears the back pill + camera,
+   content starts at the top and scrolls, bottom padding clears the voice toggle */
+#path, #stickerbook { justify-content: flex-start; overflow-y: auto; }
+#path .big-title, #stickerbook .big-title {
+  margin-top: calc(44px + env(safe-area-inset-top));
+  font-size: clamp(34px, 8vw, 72px);
+}
+.path-map, .book-body { padding-bottom: 120px; }
+
+/* Back pills must survive scrolling (they were absolute -> scrolled away) */
+#path-back-btn, #book-back-btn { position: fixed; }
+
+/* Welcome on phones: scrollable, and the theme grid clears the voice toggle
+   (the Bluey card was hiding underneath it) */
+@media (max-width: 620px) {
+  #welcome { justify-content: flex-start; overflow-y: auto; }
+  #welcome .big-title { margin-top: calc(44px + env(safe-area-inset-top)); }
+  #welcome .theme-grid { margin-bottom: calc(100px + env(safe-area-inset-bottom)); }
+}
+
+/* ===== Clean answer buttons + single "hear the choices" pill ===== */
+/* Answer buttons: back to simple centered labels (speaker zones removed) */
+.option-btn { padding-left: 24px !important; justify-content: center; }
+.option-btn .option-label { padding: 8px 4px; }
+.hear-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 14px auto 0;
+  background: rgba(255,255,255,0.8);
+  border: 2.5px solid #16988f; color: #16988f;
+  border-radius: 999px; padding: 9px 18px;
+  font-family: inherit; font-weight: 700; font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(22,152,143,0.35);
+}
+.hear-btn.speaking { background: #e2f8ec; animation: hear-pulse 1s ease-in-out infinite; }
+.hear-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(22,152,143,0.35); }
+@keyframes hear-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+/* Voice toggle: top-right on browsing screens (phones) — it was covering the
+   bottom-left theme cards; lesson keeps it bottom-left away from answers */
+@media (max-width: 540px) {
+  body:has(#kid-picker.active) .voice-toggle,
+  body:has(#welcome.active) .voice-toggle,
+  body:has(#path.active) .voice-toggle,
+  body:has(#stickerbook.active) .voice-toggle {
+    top: calc(10px + env(safe-area-inset-top)); bottom: auto;
+    left: auto; right: 14px;
+    width: 56px; height: 56px;
+  }
+  body:has(#kid-picker.active) .voice-toggle .vt-emoji,
+  body:has(#welcome.active) .voice-toggle .vt-emoji,
+  body:has(#path.active) .voice-toggle .vt-emoji,
+  body:has(#stickerbook.active) .voice-toggle .vt-emoji { font-size: 20px; }
+  /* titles stay clear of the corner controls */
+  #path .big-title, #stickerbook .big-title, #welcome .big-title {
+    max-width: calc(100% - 150px);
+    margin-left: auto; margin-right: auto;
+  }
+  /* parent link joins the page flow instead of floating over the grid */
+  .parent-link { position: static; display: block; margin: 16px auto calc(16px + env(safe-area-inset-bottom)); }
+}
+
+/* ===== Contrast pass (Matt: no green-on-green / purple-on-purple / echoes) ===== */
+/* Celebrate: deep ink-green on the light overlay, white punch-out */
+#celebrate-text { color: #0b4f38; filter: drop-shadow(2px 2px 0 #ffffff) drop-shadow(0 8px 14px rgba(0,0,0,0.3)); }
+/* Path screen text on dark themed backgrounds: white with real shadows */
+.path-progress-label { color: #ffffff !important; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+.path-land-title { color: #ffffff !important; text-shadow: 0 2px 8px rgba(0,0,0,0.45); }
+.island-name { color: #ffffff !important; text-shadow: 0 1px 4px rgba(0,0,0,0.55); }
+.island-sub { color: #b8ffd9 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+.book-section-title, .book-counts, .book-empty, .path-empty { color: #ffffff !important; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+/* Question titles: one soft grounded shadow, no doubled echo */
+.title-big { text-shadow: none !important; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.35)) drop-shadow(0 10px 18px rgba(0,0,0,0.28)); }
+.big-title { filter: drop-shadow(0 3px 0 rgba(255,255,255,0.7)) drop-shadow(0 10px 20px rgba(0,0,0,0.18)); }
+
+/* ===== Even answer layouts (Matt: buttons must be perfectly spaced) ===== */
+@media (max-width: 540px) {
+  /* short answers: uniform 2-column grid — no orphan wrapping */
+  #lesson .options.options-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; width: 100%; padding: 0 2px;
+  }
+  #lesson .options.options-grid .option-btn { width: 100%; max-width: none; min-height: 64px; }
+  /* odd last button centers across the full row instead of dangling */
+  #lesson .options.options-grid .option-btn:last-child:nth-child(odd) {
+    grid-column: 1 / -1; justify-self: center; width: 70%;
+  }
+  /* long answers (reading comp): full-width stack */
+  #lesson .options.options-stack { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
+  #lesson .options.options-stack .option-btn { width: 100%; max-width: none; }
+  /* bottom bar: keep the replay pill clear of the voice toggle */
+  #lesson .actions { padding-left: 92px !important; padding-right: 18px !important; }
+  /* reading paragraphs: never clip */
+  .title-big.paragraph { font-size: clamp(16px, 4.6vw, 22px) !important; line-height: 1.4 !important; max-height: none !important; overflow: visible !important; }
+}
+
+/* ===== iPad: bigger targets, bigger words, easier reading ===== */
+@media (min-width: 700px) {
+  .options button { font-size: clamp(30px, 3vw, 40px); padding: 26px 46px; border-radius: 26px; }
+  .option-btn { min-height: 88px; }
+  .bubble { font-size: clamp(22px, 2.4vw, 30px); max-width: 820px; }
+  .title-big { font-size: clamp(64px, 9vw, 130px); }
+  .title-big.paragraph { font-size: clamp(24px, 2.6vw, 34px); line-height: 1.45; }
+  .prompt-line { font-size: clamp(22px, 2.4vw, 30px); }
+  .hear-btn { font-size: 19px; padding: 13px 26px; }
+  .theme-card { font-size: 22px; }
+  .theme-card .emoji { font-size: 76px; }
+}
+
+/* ===== Lesson content must NEVER crowd the bottom bar (Matt) =====
+   Tall content (reading answers) now scrolls inside the stage, with enough
+   bottom padding that the last button always clears the voice toggle. */
+@media (max-width: 540px) {
+  #lesson .stage {
+    overflow-y: auto;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+  #lesson .options.options-stack .option-btn { min-height: 52px; }
+  #lesson .options.options-stack .option-btn .option-label {
+    font-size: clamp(14px, 4vw, 17px);
+    padding: 6px 8px;
+  }
+  .hear-btn { font-size: 14px; padding: 8px 15px; }
+}
+
+/* ===== HOME SCREEN: fits ONE phone screen — no cut cards, no scrolling ===== */
+@media (max-width: 540px) {
+  #welcome { justify-content: center; }
+  #welcome .big-title {
+    font-size: clamp(30px, 9vw, 44px);
+    margin-top: calc(26px + env(safe-area-inset-top));
+  }
+  #welcome .big-sub { font-size: 15px; margin: 6px 0 12px; }
+  .cta-row { gap: 8px; margin: 0 0 12px; }
+  .path-cta { font-size: 14px !important; padding: 10px 14px !important; }
+  #welcome .theme-grid { gap: 10px; margin-bottom: 8px; }
+  #welcome .theme-card {
+    padding: 10px 6px 9px;
+    font-size: 13px;
+    gap: 6px;
+    border-radius: 18px;
+  }
+  #welcome .theme-card .emoji { font-size: 34px; }
+  .parent-link { font-size: 12px; padding: 6px 12px; margin: 8px auto calc(6px + env(safe-area-inset-bottom)); }
+}
+
+/* Learning Path: soft fade at the bottom edge — half-visible islands at the
+   scroll fold read as "more below", never as broken buttons */
+#path::after {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 64px;
+  background: linear-gradient(to bottom, rgba(24,18,64,0) 0%, rgba(24,18,64,0.82) 90%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Ink text on white content cards — theme gold was invisible on them (1.44:1) */
+.title-big.paragraph, .title-big.count-card {
+  color: #23405a !important;
+  -webkit-text-fill-color: #23405a !important;
+  filter: none !important;
+}
+
+/* Overlay cards must never exceed the phone screen (finale borders were cut) */
+@media (max-width: 540px) {
+  .finale-card {
+    max-width: calc(100vw - 28px);
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 26px 16px;
+  }
+  .modal-card {
+    max-width: calc(100vw - 28px);
+    box-sizing: border-box;
+    padding: 24px 18px;
+  }
+  .fact-toast { max-width: calc(100vw - 24px); box-sizing: border-box; }
+}
+
+/* ===== THE grid-scroll fix =====
+   In CSS grid, a 1fr row only shrinks (and therefore scrolls) if it has
+   min-height: 0. Without it the stage grew to content height, bled under the
+   actions bar and off-screen — Matt's cut-off answer buttons on short phones. */
+#lesson .stage { min-height: 0; }
+
+/* Actions bar: no more dirty translucent band — the pills carry themselves */
+@media (max-width: 540px) {
+  #lesson .actions {
+    background: transparent;
+    border-top: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ===== Safe centering for the lesson stage =====
+   justify-content:center + overflow clips the TOP of tall content and makes it
+   unscrollable (the bubble ate the paragraph's first line). `safe center`
+   falls back to flex-start when content overflows; older engines get
+   flex-start outright. Short content still centers via auto margins. */
+#lesson .stage {
+  justify-content: flex-start;
+  justify-content: safe center;
+}
+#lesson .stage > .bubble { margin-top: auto; }
+#lesson .stage > .content { margin-bottom: auto; }
+
+/* ================================================================
+   FINAL AUTHORITATIVE LESSON LAYOUT — supersedes every patch above.
+   Simple, predictable: hud / scrolling stage / actions. Content flows
+   top-to-bottom like a worksheet; tall content scrolls; NOTHING is
+   absolutely positioned or auto-margined inside the stage.
+   ================================================================ */
+#lesson.screen.active {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  padding: 0 !important;
+}
+#lesson .stage {
+  min-height: 0 !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 16px 28px 16px !important;
+  margin: 0 !important;
+}
+#lesson .stage > .bubble  { margin: 0 auto !important; flex: 0 0 auto; position: relative; }
+#lesson .stage > .content { margin: 0 !important; flex: 0 0 auto; width: 100%; }
+#lesson .actions { position: static !important; }
+
+/* Learning Path: solid header band — islands scroll UNDER it, never beheaded */
+#path::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: calc(env(safe-area-inset-top) + 112px);
+  background: linear-gradient(to bottom, #241a52 0%, #241a52 62%, rgba(36,26,82,0) 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+#path .big-title { position: relative; z-index: 5; }
+#path-back-btn { z-index: 6; }
+#path .path-progress { position: relative; z-index: 5; }
+
+/* Grade buttons: REAL visible buttons (they were white-on-white ghost text) */
+#addkid .grade-btn {
+  background: #eef4f1 !important;
+  border: 3px solid #9fb4a9 !important;
+  color: #23405a !important;
+  min-width: 52px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+}
+#addkid .grade-btn.selected {
+  background: #1fa06b !important;
+  border-color: #157a56 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 0 #0f5c41;
+}
+
+/* ================================================================
+   POLISH PASS (2026-07-07): grade buttons, celebrate word, reading fit
+   ================================================================ */
+
+/* Grade buttons: 5 equal-width buttons that can NEVER clip their label.
+   They were flex-shrinking below their text width ("2nd" -> "2n"). */
+#addkid .grade-row { gap: 6px !important; }
+#addkid .grade-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  padding: 12px 2px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  display: flex; align-items: center; justify-content: center;
+}
+#addkid .grade-btn.selected { transform: scale(1.05) !important; }
+
+/* Celebrate word ("SPECTACULAR!" etc): size to the screen, never overflow.
+   Was a fixed 64px — 12-letter words ran off both edges on iPhone. */
+#celebrate-text {
+  font-size: clamp(22px, 8.5vw, 64px) !important;
+  max-width: 96vw;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Reading-comp lessons on phone-height screens: everything fits WITHOUT
+   scrolling (the 4th answer was hiding under the actions bar on SE).
+   Drop the decorative picture, tighten the paragraph card + options. */
+@media (max-height: 700px) {
+  #lesson .content:has(.title-big.paragraph) .question-visual { display: none !important; }
+  #lesson .content:has(.title-big.paragraph) { gap: 8px !important; }
+  #lesson .content .title-big.paragraph {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+    padding: 10px 14px !important;
+  }
+  #lesson .content:has(.title-big.paragraph) .prompt-line {
+    font-size: 16px !important;
+    margin: 2px 0 !important;
+  }
+  #lesson .content:has(.title-big.paragraph) .options { gap: 8px !important; }
+  #lesson .content:has(.title-big.paragraph) .options button {
+    min-height: 44px !important;
+    padding: 9px 14px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Answer buttons looked "cut off": #lesson .content kept overflow-y:auto from
+   the old layout where IT was the scroller. Its box ends exactly at the last
+   button row, so it sheared off the buttons' 3D bottom shadows (flat cut).
+   The stage is the scroller now — content must never clip. */
+#lesson .stage > .content, #lesson .content { overflow: visible !important; }
+/* and give the stage scroller room so shadows survive at the true fold too */
+#lesson .stage { padding-bottom: 34px !important; }
+
+/* ================================================================
+   ANSWER BUTTONS FILL PASS (Matt 2026-07-07): equal-size grid cells,
+   text scales up to FILL the button (JS grow-to-fit), esp. tablet.
+   ================================================================ */
+#lesson .options {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 860px;
+}
+#lesson .options button {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: clamp(64px, 11vh, 160px);
+  padding: 10px 14px !important;
+  display: flex; align-items: center; justify-content: center;
+}
+/* odd counts: last button spans the full row (1, 3, or 5 choices) */
+#lesson .options button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+#lesson .options .option-label { display: block; width: 100%; text-align: center; line-height: 1.15; }
+@media (min-width: 700px) {
+  #lesson .options { gap: 18px; }
+  #lesson .options button { min-height: clamp(96px, 13vh, 200px); }
+}
+
+/* ================================================================
+   HORIZONTAL OVERFLOW FIX (Matt's 19−6 screenshot): a long emoji
+   strip (19 mermaids) is unbreakable content, and grid/flex items
+   refuse to shrink below min-content — so the ENTIRE lesson grid
+   (hud, buttons, everything) went wider than the phone and got cut
+   at both edges. Floor everything at 0 and let emoji strips wrap.
+   ================================================================ */
+#lesson.screen.active { grid-template-columns: minmax(0, 1fr) !important; }
+#lesson .hud, #lesson .stage, #lesson .actions,
+#lesson .stage > .content, #lesson .options {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+#lesson .stage > .content { box-sizing: border-box; }
+/* emoji strips: wrap between emoji instead of forcing width */
+.question-visual { max-width: 100% !important; }
+.v-emoji-group {
+  max-width: 100%;
+  white-space: normal !important;
+  line-break: anywhere;
+  overflow-wrap: anywhere;
+}
+/* scene emoji rows too (same failure shape) */
+.content .scene-emojis { max-width: 100%; line-break: anywhere; }
+
+/* max-width:100% must include padding or the side margins get pushed off-screen */
+#lesson .hud, #lesson .stage, #lesson .actions,
+#lesson .stage > .content, #lesson .options { box-sizing: border-box !important; }
+
+/* ================================================================
+   HUD OVERFLOW FIX (Matt 2026-07-07): stickers + quest trail + break
+   were fixed-width pills — 8 earned stickers pushed the trail off the
+   right edge and shoved "break" off-screen. Every pill now shrinks;
+   break is untouchable; newest stickers stay in view when tight.
+   ================================================================ */
+.hud { gap: 8px; }
+.hud .stickers {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  justify-content: flex-end;   /* clip OLD stickers on the left, not new ones */
+}
+.hud .quest-trail { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.hud .break-btn { flex: 0 0 auto; }
+@media (max-width: 540px) {
+  .stickers { font-size: 22px; min-height: 32px; padding: 4px 10px; gap: 4px; }
+  .quest-trail { padding: 5px 8px; gap: 3px; }
+  .quest-stone { width: 8px; height: 8px; }
+  .quest-climber { font-size: 16px; }
+  .quest-flag { font-size: 15px; }
+}
+
+/* ================================================================
+   PAYWALL / UNLOCK GATE (Brainforest Forever) — 2026-07-08
+   Full-bleed magical hero, glass card, single gold unlock CTA.
+   Kids-category compliant: parental gate before the buy screen.
+   ================================================================ */
+#unlock-gate {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+  background: #1a2b22 url("img/paywall-hero.jpg") center/cover no-repeat;
+  overflow-y: auto;
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+/* warm scrim so the card always reads over any hero */
+#unlock-gate::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(20,30,24,0.35) 0%, rgba(20,30,24,0.55) 55%, rgba(20,30,24,0.82) 100%);
+}
+.ug-card {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 420px; margin: auto;
+  background: rgba(255,255,255,0.96);
+  border-radius: 28px;
+  padding: 30px 26px 26px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 2px 0 rgba(255,255,255,0.6) inset;
+  text-align: center;
+  animation: ug-pop 420ms cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes ug-pop { from { transform: scale(0.9) translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ug-card.hidden { display: none; }
+.ug-card h2 {
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: clamp(26px, 7vw, 34px);
+  color: #1b5e43; margin: 6px 0 8px; line-height: 1.1;
+}
+.ug-card p { color: #3a4a42; font-size: 16px; line-height: 1.5; margin: 0 0 18px; }
+.ug-emoji { font-size: 54px; line-height: 1; margin-bottom: 6px; }
+.ug-key {
+  font-size: 64px; line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(245,184,0,0.6));
+  animation: ug-key-float 3s ease-in-out infinite;
+}
+@keyframes ug-key-float { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
+
+.ug-main {
+  display: block; width: 100%;
+  background: linear-gradient(180deg, #ffd257, #f5a623);
+  color: #5a3a00; font-weight: 800; font-size: 19px;
+  border: 0; border-radius: 999px; padding: 17px 20px;
+  box-shadow: 0 6px 0 #c47f10, 0 12px 22px rgba(196,127,16,0.4);
+  cursor: pointer; margin-top: 6px;
+  transition: transform 90ms;
+}
+.ug-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #c47f10; }
+.ug-link {
+  display: block; width: 100%; margin: 12px auto 0;
+  background: none; border: 0; color: #557; font-size: 14px;
+  text-decoration: underline; cursor: pointer;
+}
+.ug-note { margin: 12px 0 0 !important; font-size: 14px; color: #b0392a; }
+.ug-note.hidden { display: none; }
+.ug-fine { margin: 14px 0 0 !important; font-size: 12px; color: #8a978f; }
+
+/* buy card: value list */
+.ug-buy-title { margin-top: 4px; }
+.ug-buy-sub { margin-bottom: 16px !important; font-size: 15px; }
+.ug-features { list-style: none; margin: 0 0 20px; padding: 0; text-align: left; }
+.ug-features li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.ug-features li:last-child { border-bottom: 0; }
+.ug-features li span { font-size: 26px; flex: 0 0 auto; width: 34px; text-align: center; }
+.ug-features li div { font-size: 14px; color: #6a776f; line-height: 1.3; }
+.ug-features li b { display: block; color: #23342c; font-size: 15px; font-weight: 700; }
+
+/* parental gate input */
+#ug-answer {
+  width: 100%; box-sizing: border-box; text-align: center;
+  font-size: 26px; font-weight: 800; color: #23342c;
+  padding: 14px; margin: 0 0 16px;
+  border: 3px solid #cdd8d1; border-radius: 16px; background: #f5f8f6;
+}
+#ug-answer:focus { outline: none; border-color: #1fa06b; }
+
+/* Rendered golden-key badge on the buy card (replaces the emoji) */
+.ug-key-img {
+  width: 128px; height: 128px; border-radius: 50%;
+  object-fit: cover; margin: -8px auto 4px; display: block;
+  box-shadow: 0 8px 22px rgba(245,184,0,0.45), 0 0 0 5px rgba(255,255,255,0.9);
+  animation: ug-key-float 3.4s ease-in-out infinite;
+}
+
+/* Compact the buy card so Restore Purchases + fine print stay above the fold
+   even on the smallest phones (Apple wants Restore visible, not scroll-only) */
+#ug-buy { padding: 20px 24px 20px; }
+#ug-buy .ug-key-img { width: 96px; height: 96px; margin-top: -2px; }
+#ug-buy .ug-buy-title { font-size: clamp(24px, 6.5vw, 30px); margin: 4px 0 6px; }
+#ug-buy .ug-buy-sub { font-size: 14px; margin-bottom: 12px !important; }
+#ug-buy .ug-features { margin-bottom: 14px; }
+#ug-buy .ug-features li { padding: 6px 0; }
+#ug-buy .ug-features li span { font-size: 23px; }
+#ug-buy .ug-features li b { font-size: 14px; }
+#ug-buy .ug-features li div { font-size: 13px; }
+#ug-buy .ug-main { padding: 15px 20px; font-size: 18px; }
+#ug-buy .ug-link { margin-top: 9px; }
+#ug-buy .ug-fine { margin-top: 8px !important; }

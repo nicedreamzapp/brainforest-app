@@ -1,0 +1,8 @@
+# Regenerable voice pack (build via tools/build_voice_pack.py)
+web/voice/
+# Build artifacts
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+.DS_Store
