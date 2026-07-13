@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Brainforest</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>" />
+<link rel="stylesheet" href="style.css?v=bf1" />
+</head>
+<body>
+
+<!-- Big playful side toggle — turn voice on/off -->
+<button id="voice-toggle" class="voice-toggle voice-on" aria-pressed="true" title="Voice on/off">
+  <span class="vt-emoji">🔊</span>
+  <span class="vt-label">voice</span>
+</button>
+
+<!-- canvas just for the celebrate confetti -->
+<canvas id="confetti"></canvas>
+
+<!-- Kid picker (shown first if no kid cookie set) -->
+<section id="kid-picker" class="screen">
+  <h1 class="big-title">Who's playing?</h1>
+  <div class="kid-grid" id="kid-grid">
+    <!-- populated from /api/kids -->
+  </div>
+</section>
+
+<!-- Welcome / theme picker -->
+<section id="welcome" class="screen">
+  <button id="switch-kid-btn" class="switch-kid-btn" title="Switch kid">↶ switch kid</button>
+  <h1 class="big-title">Hi<span id="welcome-name"></span>!</h1>
+  <p class="big-sub">Where do you want to play today?</p>
+  <div class="cta-row">
+    <button id="path-btn" class="path-cta">🗺️ My Learning Path</button>
+    <button id="book-btn" class="path-cta book-cta">🎒 My Sticker Book</button>
+  </div>
+  <div class="theme-grid">
+    <button class="theme-card" data-theme="unicorns"><span class="emoji">🦄</span><span>Unicorns</span></button>
+    <button class="theme-card" data-theme="mermaids"><span class="emoji">🧜‍♀️</span><span>Mermaids</span></button>
+    <button class="theme-card" data-theme="dinos"><span class="emoji">🦕</span><span>Dinosaurs</span></button>
+    <button class="theme-card" data-theme="space"><span class="emoji">🚀</span><span>Space</span></button>
+    <button class="theme-card" data-theme="cats"><span class="emoji">🐱</span><span>Cats</span></button>
+    <button class="theme-card" data-theme="horses"><span class="emoji">🐴</span><span>Horses</span></button>
+    <button class="theme-card" data-theme="bluey"><span class="emoji">🐶</span><span>Puppies</span></button>
+    <button class="theme-card surprise" data-theme="surprise"><span class="emoji">🎁</span><span>Surprise me!</span></button>
+  </div>
+  <button id="parent-btn" class="parent-link">parent dashboard</button>
+</section>
+
+<!-- Learning Path / world map -->
+<section id="path" class="screen">
+  <button id="path-back-btn" class="switch-kid-btn" title="Back">↶ back</button>
+  <h1 class="big-title">Your Learning Path</h1>
+  <div class="path-progress">
+    <div class="path-progress-bar"><span id="path-progress-fill"></span></div>
+    <p id="path-progress-label" class="path-progress-label"></p>
+  </div>
+  <div id="path-map" class="path-map">
+    <!-- populated from /api/path -->
+  </div>
+</section>
+
+<!-- Sticker book (persistent collection) -->
+<section id="stickerbook" class="screen">
+  <button id="book-back-btn" class="switch-kid-btn" title="Back">↶ back</button>
+  <h1 class="big-title">My Sticker Book</h1>
+  <div id="book-body" class="book-body">
+    <!-- populated from /api/collection -->
+  </div>
+</section>
+
+<!-- Lesson screen -->
+<section id="lesson" class="screen">
+  <!-- Themed treehouse backdrop (lazy-loaded, browser-cached) -->
+  <div id="backdrop" class="backdrop"></div>
+  <header class="hud">
+    <div class="stickers" id="stickers"></div>
+    <div id="quest-trail" class="quest-trail" title="Your climb to the treehouse"></div>
+    <button id="break-btn" class="break-btn" title="Take a break">break</button>
+  </header>
+
+  <!-- Did-you-know fact toast (shows briefly between activities) -->
+  <div id="fact-toast" class="fact-toast hidden">
+    <span class="fact-label">Did you know</span>
+    <span id="fact-text"></span>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="bubble" id="bubble">
+      <p class="said" id="said"></p>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+
+  <footer class="actions">
+    <button id="repeat-btn" class="repeat-btn" title="say it again" aria-label="Say it again">🔊</button>
+    <button id="next-btn" class="next-btn hidden">next ▶</button>
+  </footer>
+</section>
+
+<!-- Celebrate overlay -->
+<div id="celebrate" class="celebrate hidden">
+  <div class="big-star">⭐</div>
+  <p id="celebrate-text"></p>
+</div>
+
+<!-- Quest finale overlay — top of the treehouse! -->
+<div id="finale" class="finale hidden">
+  <div class="finale-card">
+    <p class="finale-title">QUEST COMPLETE!</p>
+    <div id="finale-treasure" class="finale-treasure">🏆</div>
+    <p id="finale-treasure-name" class="finale-treasure-name"></p>
+    <p id="finale-sub" class="finale-sub"></p>
+    <p class="finale-tap">tap anywhere to keep going</p>
+  </div>
+</div>
+
+<!-- Setup modal (first launch) -->
+<div id="setup" class="modal hidden">
+  <div class="modal-card">
+    <h2>Welcome!</h2>
+    <p>What's your name?</p>
+    <input id="setup-name" type="text" value="" placeholder="Your kid's name" />
+    <p>Pick a tutor name:</p>
+    <input id="setup-tutor" type="text" value="Bloom" />
+    <button id="setup-save">Start!</button>
+  </div>
+</div>
+
+<!-- Add-a-kid modal (any grade K-4) -->
+<div id="addkid" class="modal hidden">
+  <div class="modal-card">
+    <h2>Add a kid</h2>
+    <p>Name</p>
+    <input id="addkid-name" type="text" value="" placeholder="First name" maxlength="20" />
+    <p>Grade</p>
+    <div class="grade-row" id="addkid-grades">
+      <button class="grade-btn" data-grade="0">K</button>
+      <button class="grade-btn" data-grade="1">1st</button>
+      <button class="grade-btn" data-grade="2">2nd</button>
+      <button class="grade-btn" data-grade="3">3rd</button>
+      <button class="grade-btn" data-grade="4">4th</button>
+    </div>
+    <button id="addkid-save">Let's go!</button>
+    <button id="addkid-cancel" class="modal-cancel">cancel</button>
+  </div>
+</div>
+
+<script src="engine.js?v=bf1"></script>
+<script src="sfx.js?v=bf1"></script>
+<script src="app.js?v=bf1"></script>
+<script src="uitour.js?v=bf1"></script>
+</body>
+</html>
