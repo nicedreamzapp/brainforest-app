@@ -6,6 +6,7 @@
 //   bf://    — custom scheme serving the bundled web/ folder (absolute paths work)
 
 import SwiftUI
+import UIKit
 import WebKit
 import AVFoundation
 import CryptoKit
@@ -197,6 +198,9 @@ final class Purchases {
     weak var webView: WKWebView?
     static let productID = "com.brainforest.app.forever"
 
+    private var updatesTask: Task<Void, Never>?
+    private var cachedProduct: Product?
+
     private func reply(_ dict: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let json = String(data: data, encoding: .utf8) else { return }
@@ -212,22 +216,77 @@ final class Purchases {
         return false
     }
 
+    // StoreKit requires a transaction listener that runs for the whole life of the
+    // app. Without it, a purchase that completes out-of-band (Ask to Buy, an
+    // interrupted sheet, a re-auth prompt) never gets finished and the unlock is
+    // silently lost. Started once, at launch, before any paywall can appear.
+    func startListening() {
+        guard updatesTask == nil else { return }
+        updatesTask = Task.detached(priority: .background) {
+            for await update in Transaction.updates {
+                guard case .verified(let t) = update else { continue }
+                await t.finish()
+                if t.productID == Self.productID {
+                    Purchases.shared.reply(["cmd": "buy", "ok": true])
+                }
+            }
+        }
+    }
+
+    // A single products(for:) call can come back empty on a cold or flaky
+    // network — StoreKit does not retry for you. Retry a few times before
+    // telling the caller the product doesn't exist.
+    private func product() async throws -> Product? {
+        if let cachedProduct { return cachedProduct }
+        var lastError: Error?
+        for attempt in 0..<3 {
+            do {
+                if let p = try await Product.products(for: [Self.productID]).first {
+                    cachedProduct = p
+                    return p
+                }
+            } catch {
+                lastError = error
+            }
+            if attempt < 2 { try? await Task.sleep(nanoseconds: 800_000_000) }
+        }
+        if let lastError { throw lastError }
+        return nil
+    }
+
+    @MainActor
+    private static func activeScene() -> UIWindowScene? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+    }
+
     func handle(cmd: String) {
         Task {
             switch cmd {
             case "status":
                 let isOwned = await owned()
                 var price = "$0.99"
-                if let p = try? await Product.products(for: [Self.productID]).first {
+                var loaded = false
+                if let p = try? await product() {
                     price = p.displayPrice
+                    loaded = true
                 }
-                reply(["cmd": "status", "owned": isOwned, "price": price])
+                reply(["cmd": "status", "owned": isOwned, "price": price, "loaded": loaded])
             case "buy":
                 do {
-                    guard let product = try await Product.products(for: [Self.productID]).first else {
+                    guard let product = try await product() else {
                         reply(["cmd": "buy", "ok": false, "error": "not-found"]); return
                     }
-                    let result = try await product.purchase()
+                    // Present the payment sheet in an explicit scene. The
+                    // no-argument purchase() has to guess which scene is
+                    // frontmost, and in a WKWebView-driven app it can guess
+                    // wrong and never show the sheet at all.
+                    let result: Product.PurchaseResult
+                    if let scene = await Self.activeScene() {
+                        result = try await product.purchase(confirmIn: scene)
+                    } else {
+                        result = try await product.purchase()
+                    }
                     switch result {
                     case .success(let verification):
                         if case .verified(let t) = verification {
@@ -238,11 +297,19 @@ final class Purchases {
                         }
                     case .userCancelled:
                         reply(["cmd": "buy", "ok": false, "error": "cancelled"])
-                    default:
+                    case .pending:
+                        // Ask to Buy / SCA — the transaction listener above will
+                        // deliver the unlock when the parent approves it.
                         reply(["cmd": "buy", "ok": false, "error": "pending"])
+                    @unknown default:
+                        reply(["cmd": "buy", "ok": false, "error": "unknown"])
                     }
                 } catch {
-                    reply(["cmd": "buy", "ok": false, "error": "failed"])
+                    // Carry the real StoreKit error through to the UI. Silently
+                    // collapsing every failure into "failed" is what made the
+                    // last App Review rejection impossible to diagnose.
+                    reply(["cmd": "buy", "ok": false, "error": "failed",
+                           "detail": String(describing: error)])
                 }
             case "restore":
                 try? await AppStore.sync()
@@ -340,6 +407,7 @@ struct BrainWebView: UIViewRepresentable {
         #endif
         Narrator.shared.webView = webView
         Purchases.shared.webView = webView
+        Purchases.shared.startListening()
         webView.load(URLRequest(url: URL(string: "bf://app/index.html")!))
         return webView
     }

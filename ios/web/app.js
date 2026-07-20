@@ -2079,7 +2079,9 @@ function advance() { nextActivity(); }
       pendingBuy = (r) => {
         if (r.ok) { markOwned(); if (window.SFX) SFX.play("fanfare"); }
         else if (r.error === "cancelled") msg("No problem — nothing was charged.");
-        else msg("Purchase didn't go through. Try again in a moment.");
+        else if (r.error === "pending") msg("Waiting on a grown-up to approve this purchase.");
+        else msg("Purchase didn't go through. Try again in a moment."
+                 + (r.detail ? " (" + r.detail + ")" : r.error ? " (" + r.error + ")" : ""));
       };
       send("buy");
     });
