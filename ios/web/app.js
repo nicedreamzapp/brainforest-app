@@ -1965,11 +1965,30 @@ function advance() { nextActivity(); }
 // ============================================================
 (function () {
   const TRIAL_DAYS = 60;
+  const GRACE_DAYS = 7;    // breathing room when the store can't be reached
   const iapNative = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bfIAP;
   const send = (cmd) => { try { iapNative && iapNative.postMessage({ cmd }); } catch (_) {} };
 
   let PRICE = "$0.99";
   let pendingBuy = null, pendingRestore = null;
+  let storeReady = null;            // null = haven't heard back yet
+  const storeWaiters = [];
+
+  function setStoreReady(ok) {
+    storeReady = !!ok;
+    while (storeWaiters.length) storeWaiters.shift()(storeReady);
+  }
+
+  // Resolves as soon as StoreKit answers, or false if it never does. A child
+  // must never be left staring at a locked door because the App Store is
+  // unreachable — offline, a network hiccup, or a product that won't load.
+  function whenStoreKnown(ms = 4000) {
+    return new Promise((resolve) => {
+      if (storeReady !== null) return resolve(storeReady);
+      storeWaiters.push(resolve);
+      setTimeout(() => resolve(storeReady === null ? false : storeReady), ms);
+    });
+  }
 
   window.__bfIAP = {
     result(r) {
@@ -1977,6 +1996,7 @@ function advance() { nextActivity(); }
       if (r.cmd === "status") {
         if (r.price) PRICE = r.price;
         if (r.owned) markOwned();
+        setStoreReady(r.loaded);
         const pb = document.getElementById("bf-buy-btn");
         if (pb) pb.textContent = "Unlock forever — " + PRICE;
       } else if (r.cmd === "buy" && pendingBuy) {
@@ -2037,6 +2057,7 @@ function advance() { nextActivity(); }
         <button class="ug-main" id="bf-buy-btn">Unlock forever — ${PRICE}</button>
         <button class="ug-link" id="ug-restore">Restore Purchases</button>
         <p class="ug-note hidden" id="ug-msg"></p>
+        <button class="ug-link hidden" id="ug-later">Keep learning for now</button>
         <p class="ug-fine">One-time purchase. No recurring charges, ever.</p>
       </div>`;
     document.body.appendChild(g);
@@ -2074,14 +2095,26 @@ function advance() { nextActivity(); }
       const m = document.getElementById("ug-msg");
       m.textContent = t; m.classList.remove("hidden");
     };
+    // Offered whenever the store can't complete a purchase. Grants a grace
+    // period instead of a dead end, and the gate comes back later.
+    const later = document.getElementById("ug-later");
+    later.addEventListener("click", () => {
+      kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      const gate = document.getElementById("unlock-gate");
+      if (gate) gate.remove();
+    });
+    const offerLater = () => later.classList.remove("hidden");
     document.getElementById("bf-buy-btn").addEventListener("click", () => {
       msg("Opening App Store…");
       pendingBuy = (r) => {
         if (r.ok) { markOwned(); if (window.SFX) SFX.play("fanfare"); }
         else if (r.error === "cancelled") msg("No problem — nothing was charged.");
         else if (r.error === "pending") msg("Waiting on a grown-up to approve this purchase.");
-        else msg("Purchase didn't go through. Try again in a moment."
-                 + (r.detail ? " (" + r.detail + ")" : r.error ? " (" + r.error + ")" : ""));
+        else {
+          msg("The App Store isn't reachable right now, so nothing was charged. "
+              + "Keep learning and try again later.");
+          offerLater();
+        }
       };
       send("buy");
     });
@@ -2095,9 +2128,16 @@ function advance() { nextActivity(); }
     });
   }
 
-  function checkGate() {
+  async function checkGate() {
     const expired = window.__BF_TRIAL_EXPIRED || daysUsed() >= TRIAL_DAYS;
     if (isOwned() || !expired) return;
+    // Never lock a kid out over something we can't sell them. If StoreKit has
+    // no product to offer — offline, an App Store outage, a product that isn't
+    // live yet — extend the trial quietly and ask again in a week.
+    if (!(await whenStoreKnown())) {
+      kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      return;
+    }
     buildGate();
   }
 
