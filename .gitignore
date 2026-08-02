@@ -13,3 +13,11 @@ android/app/build/
 android/.gradle/
 android/local.properties
 **/.DS_Store
+
+# Signing material and API credentials — never commit
+android/keystore.properties
+*.p12
+*.jks
+*.keystore
+*.p8
+*.mobileprovision
