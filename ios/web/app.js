@@ -2026,7 +2026,8 @@ function advance() { nextActivity(); }
     ["What is 8 × 6 + 9?", 57], ["What is 7 × 9 + 8?", 71],
   ];
 
-  function buildGate() {
+  function buildGate(opts) {
+    opts = opts || {};
     if (document.getElementById("unlock-gate")) return;
     const g = document.createElement("div");
     g.id = "unlock-gate";
@@ -2067,6 +2068,13 @@ function advance() { nextActivity(); }
         document.getElementById(x).classList.toggle("hidden", x !== id));
     };
     let expected = null;
+    const askQuestion = () => {
+      const [q, a] = GATE_QS[Math.floor(Math.random() * GATE_QS.length)];
+      expected = a;
+      document.getElementById("ug-q").textContent = q;
+      document.getElementById("ug-answer").value = "";
+      show("ug-gate");
+    };
     // debug: jump straight to a card for screenshots (BF_GATE_STEP=gate|buy)
     if (window.__BF_GATE_STEP === "gate") {
       const [q, a] = GATE_QS[0]; expected = a;
@@ -2074,19 +2082,21 @@ function advance() { nextActivity(); }
       show("ug-gate");
     } else if (window.__BF_GATE_STEP === "buy") {
       show("ug-buy"); send("status");
+    } else if (opts.start === "gate") {
+      // Opened from the parent dashboard mid-trial: skip the trial-over card,
+      // go straight to the grown-ups question.
+      askQuestion();
     }
-    document.getElementById("ug-grownup").addEventListener("click", () => {
-      const [q, a] = GATE_QS[Math.floor(Math.random() * GATE_QS.length)];
-      expected = a;
-      document.getElementById("ug-q").textContent = q;
-      document.getElementById("ug-answer").value = "";
-      show("ug-gate");
+    document.getElementById("ug-grownup").addEventListener("click", askQuestion);
+    document.getElementById("ug-back1").addEventListener("click", () => {
+      if (opts.dismissible) g.remove(); else show("ug-kid");
     });
-    document.getElementById("ug-back1").addEventListener("click", () => show("ug-kid"));
     document.getElementById("ug-check").addEventListener("click", () => {
       if (Number(document.getElementById("ug-answer").value) === expected) {
         show("ug-buy");
         send("status");            // refresh live price on the buy button
+      } else if (opts.dismissible) {
+        g.remove();
       } else {
         show("ug-kid");
       }
@@ -2099,11 +2109,16 @@ function advance() { nextActivity(); }
     // period instead of a dead end, and the gate comes back later.
     const later = document.getElementById("ug-later");
     later.addEventListener("click", () => {
-      kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      // Mid-trial (parent dashboard) this is just a close button — don't touch
+      // the trial clock, which would cut a fresh trial down to the grace window.
+      if (!opts.dismissible) {
+        kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      }
       const gate = document.getElementById("unlock-gate");
       if (gate) gate.remove();
     });
     const offerLater = () => later.classList.remove("hidden");
+    if (opts.dismissible) offerLater();   // parents need a way back out
     document.getElementById("bf-buy-btn").addEventListener("click", () => {
       msg("Opening App Store…");
       pendingBuy = (r) => {
@@ -2144,6 +2159,13 @@ function advance() { nextActivity(); }
   window.addEventListener("load", () => {
     daysUsed();          // stamp first launch no matter what
     send("status");      // learn price + true ownership from StoreKit
+    // "Unlock forever" from the parent dashboard — reachable any time, not
+    // just after the trial (App Review needs to find the purchase on day one).
+    if (location.hash === "#unlock" && !isOwned()) {
+      history.replaceState(null, "", location.pathname + location.search);
+      buildGate({ start: "gate", dismissible: true });
+      return;
+    }
     if (!window.__BF_UITOUR || window.__BF_TRIAL_EXPIRED) checkGate();
   });
 })();

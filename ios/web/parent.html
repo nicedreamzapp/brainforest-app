@@ -79,6 +79,12 @@
   <div id="sessions-list"><p class="empty">No sessions yet.</p></div>
 </div>
 
+<div class="card" id="forever-card" style="display:none">
+  <h3>Brainforest Forever</h3>
+  <p class="sub" style="margin-bottom:12px">One-time unlock — no subscription, no ads. Every kid on this device, forever.</p>
+  <a class="back" style="margin-top:0" href="index.html#unlock">Unlock Brainforest Forever</a>
+</div>
+
 <a class="back" href="index.html">← Back to Brainforest</a>
 
 <script src="engine.js?v=bf1"></script>
@@ -153,6 +159,10 @@ async function load() {
         </div>`);
     });
   }
+}
+
+if (kvGet("bf_owned") !== "1") {
+  document.getElementById("forever-card").style.display = "";
 }
 
 (async () => { await buildTabs(); await load(); })().catch(e => {
