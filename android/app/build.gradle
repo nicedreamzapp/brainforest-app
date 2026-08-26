@@ -26,7 +26,9 @@ android {
             // keep default debuggable
         }
         release {
-            minifyEnabled false
+            // Play requires >=25% DEX coverage from Feb 2027; false is 0%.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
