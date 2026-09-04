@@ -86,6 +86,23 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelega
             .lowercased()
     }
 
+    /// Emoji are decoration for the SCREEN, never for the ear. AVSpeech reads them
+    /// aloud by their Unicode name, so "🥁 Drumroll yes!" becomes "drum, drumroll yes"
+    /// and "🦓 Striped genius!" becomes "zebra, striped genius". Strip them before
+    /// any line reaches the synthesizer. Recorded clips are already emoji-free, so
+    /// this only guards the fallback path — but that path is what kids actually hear
+    /// whenever a line isn't in the pack (praise with a server hint prefixed, custom
+    /// kid names, anything dynamic).
+    static func speakable(_ text: String) -> String {
+        let cleaned = text.unicodeScalars.filter { s in
+            !(s.properties.isEmoji && (s.value > 0x238C || s.properties.isEmojiPresentation))
+                && s.value != 0xFE0F && s.value != 0x200D
+        }
+        return String(String.UnicodeScalarView(cleaned))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    }
+
     private func recordedURL(for text: String) -> URL? {
         let key = Insecure.MD5.hash(data: Data(Self.normalize(text).utf8))
             .map { String(format: "%02x", $0) }.joined()
@@ -114,11 +131,14 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelega
             p.delegate = self
             p.play()
         } else {
-            let u = AVSpeechUtterance(string: item.text)
-            u.voice = voice
-            u.rate = 0.48
-            u.pitchMultiplier = 1.05
-            synth.speak(u)
+            // NO SYNTHESIZER. Every line the app speaks is pre-recorded, so if a
+            // clip is missing the right answer is silence, not a different voice.
+            // Kids heard the device robot say their name and then the real voice
+            // take over one sentence later — one voice or none, never a switch.
+            #if DEBUG
+            print("[bfTTS] no clip for: \(item.text)")
+            #endif
+            finishCurrent()
         }
     }
 
