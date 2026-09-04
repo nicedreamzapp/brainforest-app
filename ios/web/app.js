@@ -1959,7 +1959,7 @@ async function goHome() {
 function advance() { nextActivity(); }
 
 // ============================================================
-// Brainforest Forever — 60-day free trial, then a one-time $0.99
+// Brainforest Forever — 60-day free trial, then a one-time $1.99
 // unlock (StoreKit via the bfIAP bridge). Kids-category compliant:
 // the purchase sits behind a parental gate, with Restore Purchases.
 // ============================================================
@@ -1969,7 +1969,7 @@ function advance() { nextActivity(); }
   const iapNative = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bfIAP;
   const send = (cmd) => { try { iapNative && iapNative.postMessage({ cmd }); } catch (_) {} };
 
-  let PRICE = "$0.99";
+  let PRICE = "$1.99";
   let pendingBuy = null, pendingRestore = null;
   let storeReady = null;            // null = haven't heard back yet
   const storeWaiters = [];

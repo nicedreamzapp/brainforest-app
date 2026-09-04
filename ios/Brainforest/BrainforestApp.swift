@@ -265,7 +265,7 @@ final class Purchases {
             switch cmd {
             case "status":
                 let isOwned = await owned()
-                var price = "$0.99"
+                var price = "$1.99"
                 var loaded = false
                 if let p = try? await product() {
                     price = p.displayPrice

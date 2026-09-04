@@ -11,7 +11,7 @@ Learn offline. No ads. Ever.
 Education (Kids: ages 6–8 band)
 
 ## Price
-Free (v1.1 adds one-time $0.99 unlock after 60-day free trial)
+Free (v1.1 adds one-time $1.99 unlock after 60-day free trial)
 
 ## Description
 Built by a dad for his two daughters — and now for your family too.

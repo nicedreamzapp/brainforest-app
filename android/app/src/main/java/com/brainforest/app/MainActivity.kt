@@ -218,14 +218,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     // bfIAP: Google Play Billing is not wired up in this build. Report a truthful
-    // not-purchased / $0.99 state, and make buy() surface a "coming soon" dialog.
+    // not-purchased / $1.99 state, and make buy() surface a "coming soon" dialog.
     // TODO(billing): integrate com.android.billingclient for the one-time unlock
     // "com.brainforest.app.forever" (StoreKit non-consumable equivalent).
     private fun handleIAP(payload: String) {
         val o = try { JSONObject(payload) } catch (t: Throwable) { return }
         when (o.optString("cmd")) {
             "status" -> replyIAP(JSONObject().apply {
-                put("cmd", "status"); put("owned", false); put("price", "\$0.99")
+                put("cmd", "status"); put("owned", false); put("price", "\$1.99")
             })
             "restore" -> replyIAP(JSONObject().apply {
                 put("cmd", "restore"); put("ok", true); put("owned", false)
