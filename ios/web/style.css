@@ -1904,6 +1904,24 @@ body { background: linear-gradient(140deg, #d7f2dc 0%, #c9e9ff 55%, #f6efd2 100%
 }
 #ug-answer:focus { outline: none; border-color: #1fa06b; }
 
+/* Gift-code row on the buy card. Matt's own short-word codes, typed right here —
+   see CODE_HASHES in app.js. Matches the grown-ups answer field so the card reads
+   as one thing, and stacks under 340px so the Unlock button never gets squeezed. */
+.ug-code { display: flex; gap: 10px; align-items: stretch; margin: 12px 0 0; }
+.ug-code.hidden { display: none; }
+#ug-code {
+  flex: 1 1 auto; min-width: 0; box-sizing: border-box; text-align: center;
+  font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #23342c;
+  padding: 12px; text-transform: uppercase;
+  border: 3px solid #cdd8d1; border-radius: 16px; background: #f5f8f6;
+}
+#ug-code:focus { outline: none; border-color: #1fa06b; }
+#ug-code-go { flex: 0 0 auto; width: auto; padding: 12px 22px !important; font-size: 17px !important; }
+@media (max-width: 340px) {
+  .ug-code { flex-direction: column; }
+  #ug-code-go { width: 100%; }
+}
+
 /* Rendered golden-key badge on the buy card (replaces the emoji) */
 .ug-key-img {
   width: 128px; height: 128px; border-radius: 50%;
@@ -1926,3 +1944,165 @@ body { background: linear-gradient(140deg, #d7f2dc 0%, #c9e9ff 55%, #f6efd2 100%
 #ug-buy .ug-main { padding: 15px 20px; font-size: 18px; }
 #ug-buy .ug-link { margin-top: 9px; }
 #ug-buy .ug-fine { margin-top: 8px !important; }
+
+/* ── One question, one pill ────────────────────────────────────────────────
+   A question used to be split across up to three surfaces: the speech pill, a
+   white sentence card, and the closing ask as purple text floating directly on
+   the artwork with no background behind it. That read as three separate things
+   and the floating line was hard for a kid to see.
+   The pill now carries the whole question — setup on top, the ask bolded under
+   it — and nothing about the question is drawn anywhere else. */
+.bubble .said .q-context,
+.bubble .said .q-ask { display: block; }
+
+.bubble .said.has-context .q-context {
+  font-weight: 600;
+  opacity: 0.92;
+  margin-bottom: 10px;
+}
+
+.bubble .said.has-context .q-ask {
+  font-weight: 800;
+}
+
+/* A long passage still has to fit on a phone without pushing the answers off. */
+.bubble .said { max-height: 46vh; overflow-y: auto; }
+
+@media (max-height: 700px) {
+  .bubble .said { max-height: 38vh; }
+  .bubble .said.has-context .q-context { margin-bottom: 6px; }
+}
+
+/* Feedback sits ABOVE the question and never replaces it — a kid told to "look
+   again" has to still be able to see what was asked. */
+.bubble .said .q-feedback {
+  display: block;
+  font-weight: 800;
+  color: #7a3fd6;
+  margin-bottom: 10px;
+}
+.bubble .said .q-feedback:empty { display: none; }
+
+/* ── Two labelled read buttons, each beside what it reads ───────────────────
+   "Read question" sits under the question pill; "Read answers" sits under the
+   choices. A bare 🔊 icon parked in the footer told a kid nothing about what it
+   would do, and it was nowhere near the thing it read. */
+.repeat-btn.read-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 10px auto 0;
+  padding: 9px 18px;
+  font-size: 15px; font-weight: 700;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.88);
+  border: 2.5px solid #6b4eff; color: #5b3a7d;
+  box-shadow: 0 3px 0 rgba(107,78,255,0.35);
+}
+.repeat-btn.read-pill:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(107,78,255,0.35);
+}
+.repeat-btn.read-pill.speaking {
+  background: #efe9ff;
+  animation: hear-pulse 1s ease-in-out infinite;
+}
+/* The footer only held that one button — don't leave an empty bar behind. */
+footer.actions:not(:has(button:not(.hidden))) { display: none; }
+
+@media (max-height: 700px) {
+  .repeat-btn.read-pill { margin-top: 6px; padding: 7px 14px; font-size: 14px; }
+}
+
+/* ══ UI pass: four things that made the lesson screen harder to use ══════════ */
+
+/* 1 ── VOICE toggle was bottom-left, exactly where a kid's thumb rests while
+   holding the phone and reaching for answers. Muting the app by accident makes
+   it look broken. Move it to the TOP-left, opposite "break", and shrink it so it
+   reads as a small control rather than a big tempting button. */
+@media (max-width: 900px) {
+  #lesson.active ~ .voice-toggle,
+  body:has(#lesson.active) .voice-toggle {
+    top: calc(10px + env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: 52px !important; height: 52px !important;
+    animation: none;                 /* stop it bobbing for attention mid-question */
+    box-shadow: 0 6px 16px rgba(107,78,255,0.35), 0 0 0 3px rgba(255,255,255,0.5);
+  }
+  body:has(#lesson.active) .voice-toggle .vt-emoji { font-size: 19px; }
+  body:has(#lesson.active) .voice-toggle .vt-label { font-size: 8px; }
+}
+
+/* 2 ── "break" was a thin outline that disappeared next to the artwork. Give it
+   a solid fill, a real tap target, and enough contrast to find in a hurry —
+   this is the button a kid needs when they are done or overwhelmed. */
+.break-btn {
+  background: #ff3aa1;
+  color: #fff;
+  border-color: #fff;
+  padding: 12px 22px;
+  font-size: 17px;
+  min-height: 46px;
+  box-shadow: 0 4px 0 rgba(190,20,110,0.9), 0 6px 16px rgba(0,0,0,0.18);
+}
+.break-btn:active { box-shadow: 0 1px 0 rgba(190,20,110,0.9); }
+
+/* 3 ── The answers are what the kid is meant to act on, but the question pill
+   was the loudest thing on screen. Calm the pill slightly and make the answer
+   buttons bigger and more solid so the eye lands on them. */
+.bubble { box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+.content .options button {
+  padding: 22px 34px;
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 5px var(--teal),
+    0 10px 0 rgba(0,140,108,0.42),
+    0 16px 26px rgba(0,0,0,0.20);
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+.content .options button:active {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 5px var(--teal), 0 4px 0 rgba(0,140,108,0.42);
+}
+
+/* 4 ── A long question scrolls inside the pill, and nothing told the kid there
+   was more text below. Fade the bottom edge so there is a visible hint, and only
+   while it is actually overflowing. */
+.bubble .said.is-scrollable {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+}
+.bubble .said.is-scrollable::after {
+  content: "▾ more";
+  position: sticky; bottom: 0; left: 0;
+  display: block; text-align: center;
+  font-size: 12px; font-weight: 800; opacity: 0.55;
+}
+
+/* =====================================================================
+   Lite mode — set on <html> by perf.js for slower phones.
+   Keeps every screen, button and reward; drops the GPU-expensive parts:
+   blur, glow filters, the always-on background/title/toggle animations,
+   the staggered entry pops and animated shadows. Confetti is trimmed in JS.
+   ===================================================================== */
+html.perf-lite *, html.perf-lite *::before, html.perf-lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  transition-duration: 80ms !important;
+  transition-property: transform, opacity, background-color !important;
+}
+html.perf-lite body { animation: none !important; background-size: 100% 100% !important; }
+html.perf-lite .big-title, html.perf-lite .big-sub, html.perf-lite .title-big { animation: none !important; }
+html.perf-lite .screen.active { animation: none !important; }
+html.perf-lite .theme-card, html.perf-lite .kid-card, html.perf-lite .options button { animation: none !important; }
+html.perf-lite .theme-card:hover .emoji { animation: none !important; }
+html.perf-lite .voice-toggle, html.perf-lite .voice-toggle * { animation: none !important; }
+html.perf-lite .voice-toggle.voice-off { opacity: 0.55; }
+html.perf-lite .speaking, html.perf-lite .speaking * { animation: none !important; }
+html.perf-lite .stickers, html.perf-lite .modal { background: rgba(255,255,255,0.92) !important; }
+html.perf-lite .modal { background: rgba(0,0,0,0.6) !important; }
+/* One-shot reward pops stay, just quicker so the next question shows sooner. */
+html.perf-lite .sticker-pop, html.perf-lite .bubble, html.perf-lite .options button.right,
+html.perf-lite .options button.wrong { animation-duration: 250ms !important; }
+html.perf-lite .celebrate .big-star, html.perf-lite #celebrate-text { animation-duration: 900ms !important; }

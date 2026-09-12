@@ -2371,6 +2371,7 @@ function advance() { nextActivity(); }
         <h2>Your free adventure is complete!</h2>
         <p>You explored Brainforest free for ${TRIAL_DAYS} days.<br>It's only <b>${PRICE}</b> to keep it going <b>forever</b> — ask a grown-up!</p>
         <button class="ug-main" id="ug-grownup">I'm a grown-up</button>
+        <button class="ug-link" id="ug-code-open">I have a code</button>
       </div>
       <div class="ug-card hidden" id="ug-gate">
         <h2>Grown-ups only</h2>
@@ -2391,14 +2392,28 @@ function advance() { nextActivity(); }
         </ul>
         <button class="ug-main" id="bf-buy-btn">Unlock forever — ${PRICE}</button>
         <button class="ug-link" id="ug-restore">Restore Purchases</button>
+        <button class="ug-link" id="ug-code-open2">I have a code</button>
         <p class="ug-note hidden" id="ug-msg"></p>
         <button class="ug-link hidden" id="ug-later">Keep learning for now</button>
         <p class="ug-fine">One-time purchase. No recurring charges, ever.</p>
+      </div>
+      <div class="ug-card hidden" id="ug-code-card">
+        <div class="ug-emoji">🔑</div>
+        <h2>Enter your code</h2>
+        <p>Type the code you were given and Brainforest is yours for good.</p>
+        <div class="ug-code" id="ug-code-row">
+          <input id="ug-code" type="text" autocapitalize="characters" autocorrect="off"
+                 autocomplete="off" spellcheck="false" enterkeyhint="go"
+                 placeholder="Your code" aria-label="Unlock code">
+          <button class="ug-main" id="ug-code-go">Unlock</button>
+        </div>
+        <p class="ug-note hidden" id="ug-code-msg"></p>
+        <button class="ug-link" id="ug-code-back">back</button>
       </div>`;
     document.body.appendChild(g);
 
     const show = (id) => {
-      ["ug-kid", "ug-gate", "ug-buy"].forEach(x =>
+      ["ug-kid", "ug-gate", "ug-buy", "ug-code-card"].forEach(x =>
         document.getElementById(x).classList.toggle("hidden", x !== id));
     };
     let expected = null;
@@ -2416,6 +2431,8 @@ function advance() { nextActivity(); }
       show("ug-gate");
     } else if (window.__BF_GATE_STEP === "buy") {
       show("ug-buy"); send("status");
+    } else if (window.__BF_GATE_STEP === "code") {
+      show("ug-code-card");          // BF_GATE_STEP=code — screenshot the gift-code card
     } else if (opts.start === "gate") {
       // Opened from the parent dashboard mid-trial: skip the trial-over card,
       // go straight to the grown-ups question.
@@ -2475,6 +2492,66 @@ function advance() { nextActivity(); }
       };
       send("restore");
     });
+
+    // Gift codes. These are MATT'S OWN codes, not Apple promo codes — Apple's are
+    // unreadable 18-character strings you cannot choose and can only redeem in the App
+    // Store app, which is no use for handing a teacher or a parent a free copy. These are
+    // short words he can say out loud or write on a slip of paper, and they work offline.
+    // Behind the parental gate like every other unlock, so a kid cannot guess their way in.
+    // One tap from the very first card. A teacher or parent holding a code should never
+    // have to get past the kid screen and the grown-ups maths question first — that gate
+    // exists for the PURCHASE, which is what Apple's kids rules are about, not for typing
+    // a word Matt handed them. (Matt, 2026-09-12: "not turn into multiple screens and
+    // confusing steps.")
+    let codeCameFrom = "ug-kid";
+    const openCode = (from) => {
+      codeCameFrom = from;
+      document.getElementById("ug-code-msg").classList.add("hidden");
+      show("ug-code-card");
+      document.getElementById("ug-code").focus();
+    };
+    document.getElementById("ug-code-open").addEventListener("click", () => openCode("ug-kid"));
+    document.getElementById("ug-code-open2").addEventListener("click", () => openCode("ug-buy"));
+    document.getElementById("ug-code-back").addEventListener("click", () => {
+      if (codeCameFrom === "ug-kid" && opts.dismissible) { g.remove(); return; }
+      show(codeCameFrom);
+    });
+    const codeMsg = (t) => {
+      const m = document.getElementById("ug-code-msg");
+      m.textContent = t; m.classList.remove("hidden");
+    };
+    const submitCode = async () => {
+      const cleaned = (document.getElementById("ug-code").value || "")
+        .toUpperCase().replace(/[\s-]/g, "");
+      if (!cleaned) return;
+      let h;
+      try { h = await sha256hex(cleaned); }
+      catch (e) { codeMsg("Couldn't check that code on this device."); return; }
+      if (CODE_HASHES.indexOf(h) >= 0) {
+        markOwned();
+        if (window.SFX) SFX.play("fanfare");
+      } else {
+        codeMsg("That code didn't match. Check it and try again.");
+        document.getElementById("ug-code").select();
+      }
+    };
+    document.getElementById("ug-code-go").addEventListener("click", submitCode);
+    document.getElementById("ug-code").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submitCode(); }
+    });
+  }
+
+  // SHA-256, and the words themselves are deliberately NOT in this repo — a hash is
+  // one-way, a comment naming the code is not. To mint one:
+  //   echo -n YOURCODE | shasum -a 256
+  const CODE_HASHES = [
+    "7cefe36d0c3bb99907ce04512dbd3bd33284c5544c7113a8d9af08385ec076b6", // gift code 1
+    "6983cfebdb01ef2dfb163cc27e7ada78ecbf27a901477b93d377fedb7c968433", // gift code 2
+    "c8c8f7fe625a1a98824e4fc4887ca38b8caeb22ad91c4f40d500c3378549597e", // owner
+  ];
+  async function sha256hex(str) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
   }
 
   async function checkGate() {
