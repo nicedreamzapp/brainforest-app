@@ -21,3 +21,6 @@ android/keystore.properties
 *.keystore
 *.p8
 *.mobileprovision
+
+# Raw 24k wavs kept for cheap pitch re-renders (not shipped)
+ios/voice_raw/

@@ -6,13 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Brainforest</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>" />
-<link rel="stylesheet" href="style.css?v=bf1" />
+<link rel="stylesheet" href="style.css?v=bf2" />
 </head>
 <body>
 
 <!-- Big playful side toggle — turn voice on/off -->
-<button id="voice-toggle" class="voice-toggle voice-on" aria-pressed="true" title="Voice on/off">
-  <span class="vt-emoji">🔊</span>
+<button id="voice-toggle" class="voice-toggle voice-on" aria-pressed="true" aria-label="Voice on or off" title="Voice on/off">
+  <span class="vt-emoji" aria-hidden="true">🔊</span>
   <span class="vt-label">voice</span>
 </button>
 
@@ -37,14 +37,14 @@
     <button id="book-btn" class="path-cta book-cta">🎒 My Sticker Book</button>
   </div>
   <div class="theme-grid">
-    <button class="theme-card" data-theme="unicorns"><span class="emoji">🦄</span><span>Unicorns</span></button>
-    <button class="theme-card" data-theme="mermaids"><span class="emoji">🧜‍♀️</span><span>Mermaids</span></button>
-    <button class="theme-card" data-theme="dinos"><span class="emoji">🦕</span><span>Dinosaurs</span></button>
-    <button class="theme-card" data-theme="space"><span class="emoji">🚀</span><span>Space</span></button>
-    <button class="theme-card" data-theme="cats"><span class="emoji">🐱</span><span>Cats</span></button>
-    <button class="theme-card" data-theme="horses"><span class="emoji">🐴</span><span>Horses</span></button>
-    <button class="theme-card" data-theme="bluey"><span class="emoji">🐶</span><span>Puppies</span></button>
-    <button class="theme-card surprise" data-theme="surprise"><span class="emoji">🎁</span><span>Surprise me!</span></button>
+    <button class="theme-card" data-theme="unicorns"><span class="emoji" aria-hidden="true">🦄</span><span>Unicorns</span></button>
+    <button class="theme-card" data-theme="mermaids"><span class="emoji" aria-hidden="true">🧜‍♀️</span><span>Mermaids</span></button>
+    <button class="theme-card" data-theme="dinos"><span class="emoji" aria-hidden="true">🦕</span><span>Dinosaurs</span></button>
+    <button class="theme-card" data-theme="space"><span class="emoji" aria-hidden="true">🚀</span><span>Space</span></button>
+    <button class="theme-card" data-theme="cats"><span class="emoji" aria-hidden="true">🐱</span><span>Cats</span></button>
+    <button class="theme-card" data-theme="horses"><span class="emoji" aria-hidden="true">🐴</span><span>Horses</span></button>
+    <button class="theme-card" data-theme="bluey"><span class="emoji" aria-hidden="true">🐶</span><span>Puppies</span></button>
+    <button class="theme-card surprise" data-theme="surprise"><span class="emoji" aria-hidden="true">🎁</span><span>Surprise me!</span></button>
   </div>
   <button id="parent-btn" class="parent-link">parent dashboard</button>
 </section>
@@ -54,7 +54,7 @@
   <button id="path-back-btn" class="switch-kid-btn" title="Back">↶ back</button>
   <h1 class="big-title">Your Learning Path</h1>
   <div class="path-progress">
-    <div class="path-progress-bar"><span id="path-progress-fill"></span></div>
+    <div class="path-progress-bar" role="progressbar" aria-labelledby="path-progress-label"><span id="path-progress-fill"></span></div>
     <p id="path-progress-label" class="path-progress-label"></p>
   </div>
   <div id="path-map" class="path-map">
@@ -82,32 +82,35 @@
   </header>
 
   <!-- Did-you-know fact toast (shows briefly between activities) -->
-  <div id="fact-toast" class="fact-toast hidden">
+  <div id="fact-toast" class="fact-toast hidden" role="status" aria-live="polite">
     <span class="fact-label">Did you know</span>
     <span id="fact-text"></span>
   </div>
 
   <div class="stage" id="stage">
-    <div class="bubble" id="bubble">
+    <div class="bubble" id="bubble" role="status" aria-live="polite" aria-atomic="true">
       <p class="said" id="said"></p>
     </div>
+    <!-- Sits right under the question it reads, and SAYS what it does. A bare
+         speaker icon down in the footer told a kid nothing. -->
+    <button id="repeat-btn" class="repeat-btn read-pill" title="Read the question again"
+            aria-label="Read the question again"><span>🔊</span><span>Read question</span></button>
     <div class="content" id="content"></div>
   </div>
 
   <footer class="actions">
-    <button id="repeat-btn" class="repeat-btn" title="say it again" aria-label="Say it again">🔊</button>
     <button id="next-btn" class="next-btn hidden">next ▶</button>
   </footer>
 </section>
 
 <!-- Celebrate overlay -->
-<div id="celebrate" class="celebrate hidden">
-  <div class="big-star">⭐</div>
+<div id="celebrate" class="celebrate hidden" role="status" aria-live="assertive">
+  <div class="big-star" aria-hidden="true">⭐</div>
   <p id="celebrate-text"></p>
 </div>
 
 <!-- Quest finale overlay — top of the treehouse! -->
-<div id="finale" class="finale hidden">
+<div id="finale" class="finale hidden" role="status" aria-live="assertive">
   <div class="finale-card">
     <p class="finale-title">QUEST COMPLETE!</p>
     <div id="finale-treasure" class="finale-treasure">🏆</div>
@@ -118,30 +121,30 @@
 </div>
 
 <!-- Setup modal (first launch) -->
-<div id="setup" class="modal hidden">
+<div id="setup" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="setup-title">
   <div class="modal-card">
-    <h2>Welcome!</h2>
+    <h2 id="setup-title">Welcome!</h2>
     <p>What's your name?</p>
-    <input id="setup-name" type="text" value="" placeholder="Your kid's name" />
+    <input id="setup-name" type="text" value="" placeholder="Your kid's name" aria-label="Your kid's name" />
     <p>Pick a tutor name:</p>
-    <input id="setup-tutor" type="text" value="Bloom" />
+    <input id="setup-tutor" type="text" value="Bloom" aria-label="Tutor name" />
     <button id="setup-save">Start!</button>
   </div>
 </div>
 
 <!-- Add-a-kid modal (any grade K-4) -->
-<div id="addkid" class="modal hidden">
+<div id="addkid" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="addkid-title">
   <div class="modal-card">
-    <h2>Add a kid</h2>
+    <h2 id="addkid-title">Add a kid</h2>
     <p>Name</p>
-    <input id="addkid-name" type="text" value="" placeholder="First name" maxlength="20" />
+    <input id="addkid-name" type="text" value="" placeholder="First name" maxlength="20" aria-label="Kid's first name" />
     <p>Grade</p>
     <div class="grade-row" id="addkid-grades">
-      <button class="grade-btn" data-grade="0">K</button>
-      <button class="grade-btn" data-grade="1">1st</button>
-      <button class="grade-btn" data-grade="2">2nd</button>
-      <button class="grade-btn" data-grade="3">3rd</button>
-      <button class="grade-btn" data-grade="4">4th</button>
+      <button class="grade-btn" data-grade="0" aria-label="Kindergarten">K</button>
+      <button class="grade-btn" data-grade="1" aria-label="First grade">1st</button>
+      <button class="grade-btn" data-grade="2" aria-label="Second grade">2nd</button>
+      <button class="grade-btn" data-grade="3" aria-label="Third grade">3rd</button>
+      <button class="grade-btn" data-grade="4" aria-label="Fourth grade">4th</button>
     </div>
     <button id="addkid-save">Let's go!</button>
     <button id="addkid-cancel" class="modal-cancel">cancel</button>
@@ -149,6 +152,7 @@
 </div>
 
 <script src="engine.js?v=bf1"></script>
+<script src="perf.js?v=bf1"></script>
 <script src="sfx.js?v=bf1"></script>
 <script src="app.js?v=bf1"></script>
 <script src="uitour.js?v=bf1"></script>

@@ -334,9 +334,14 @@ class Narrator(
         val file = recordedFile(text)
         if (file != null && playRecorded(file)) return
 
-        // Fallback: synthesizer.
+        // Fallback: synthesizer. Emoji are decoration for the SCREEN, never for the
+        // ear — TextToSpeech reads them aloud by name, so "🥁 Drumroll yes!" comes out
+        // as "drum, drumroll yes". Recorded clips are already emoji-free; this guards
+        // every line that isn't in the pack.
+        val spoken = speakable(text)
+        if (spoken.isEmpty()) { finishCurrent(); return }
         if (ttsReady) {
-            val res = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id.toString())
+            val res = tts.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id.toString())
             if (res != TextToSpeech.SUCCESS) finishCurrent()
         } else {
             finishCurrent()
@@ -402,6 +407,28 @@ class Narrator(
     }
 
     // MD5(normalize(text)) → filename, matching iOS Narrator.recordedURL.
+    /** Drop emoji (and their variation selectors / ZWJ glue) so the synthesizer
+     *  never speaks one by name. Mirrors Swift Narrator.speakable(). */
+    private fun speakable(text: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            val cp = text.codePointAt(i)
+            val n = Character.charCount(cp)
+            val keep = when {
+                cp == 0xFE0F || cp == 0xFE0E || cp == 0x200D -> false
+                cp in 0x1F000..0x1FAFF -> false
+                cp in 0x2600..0x27BF -> false
+                cp in 0x2B00..0x2BFF -> false
+                cp in 0x1F1E6..0x1F1FF -> false
+                else -> true
+            }
+            if (keep) sb.appendCodePoint(cp)
+            i += n
+        }
+        return sb.toString().trim().replace(Regex("\\s+"), " ")
+    }
+
     private fun recordedFile(text: String): String? {
         val norm = text.trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
         val md5 = MessageDigest.getInstance("MD5")
