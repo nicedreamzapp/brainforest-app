@@ -24,6 +24,17 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
+import com.android.billingclient.api.AcknowledgePurchaseParams
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
@@ -161,6 +172,23 @@ class MainActivity : AppCompatActivity() {
         return storeLine + shim
     }
 
+    /**
+     * Android's back gesture ended the activity instantly, so one accidental swipe
+     * dropped a kid out mid-lesson and lost their place. iOS needs a deliberate
+     * double swipe (the home indicator is hidden), so this just brings Android in
+     * line. It is a confirmation, NOT a lock — a grown-up taps Leave and it closes
+     * normally, and nothing here can trap anyone in the app.
+     */
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        AlertDialog.Builder(this)
+            .setTitle("Leave Brainforest?")
+            .setMessage("Your place in this lesson won't be saved.")
+            .setPositiveButton("Leave") { _, _ -> super.onBackPressed() }
+            .setNegativeButton("Keep playing", null)
+            .show()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         webView.saveState(outState)
@@ -217,30 +245,143 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // bfIAP: Google Play Billing is not wired up in this build. Report a truthful
-    // not-purchased / $1.99 state, and make buy() surface a "coming soon" dialog.
-    // TODO(billing): integrate com.android.billingclient for the one-time unlock
-    // "com.brainforest.app.forever" (StoreKit non-consumable equivalent).
+    // bfIAP: Google Play Billing for the one-time unlock, mirroring the iOS
+    // StoreKit non-consumable "com.brainforest.app.forever" (same product id on
+    // Play). Non-consumable: acknowledge after purchase, never consume; owned =
+    // an acknowledged PURCHASED entry in queryPurchases.
+    private val iapProductId = "com.brainforest.app.forever"
+    private var billingReady = false
+    private var cachedPrice: String? = null
+    private val billing: BillingClient by lazy {
+        BillingClient.newBuilder(this)
+            .setListener(purchasesUpdated)
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+            )
+            .build()
+    }
+
+    private val purchasesUpdated = PurchasesUpdatedListener { result, purchases ->
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK ->
+                purchases?.forEach { onPurchase(it, fromBuy = true) }
+            BillingClient.BillingResponseCode.USER_CANCELED ->
+                replyIAP(JSONObject().apply {
+                    put("cmd", "buy"); put("ok", false); put("error", "cancelled")
+                })
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED ->
+                replyIAP(JSONObject().apply { put("cmd", "buy"); put("ok", true) })
+            else -> replyIAP(JSONObject().apply {
+                put("cmd", "buy"); put("ok", false); put("error", "failed")
+            })
+        }
+    }
+
+    private fun ensureBilling(then: () -> Unit) {
+        if (billingReady) { then(); return }
+        billing.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(result: BillingResult) {
+                billingReady = result.responseCode == BillingClient.BillingResponseCode.OK
+                if (billingReady) then()
+                else replyIAP(JSONObject().apply {
+                    put("cmd", "status"); put("owned", false); put("price", cachedPrice ?: "\$1.99")
+                })
+            }
+            override fun onBillingServiceDisconnected() { billingReady = false }
+        })
+    }
+
+    private fun queryOwned(reply: (Boolean) -> Unit) {
+        billing.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+        ) { result, purchases ->
+            val owned = result.responseCode == BillingClient.BillingResponseCode.OK &&
+                purchases.any {
+                    it.products.contains(iapProductId) &&
+                        it.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
+            // acknowledge any un-acked purchase found during restore
+            purchases.filter {
+                it.products.contains(iapProductId) &&
+                    it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged
+            }.forEach { onPurchase(it, fromBuy = false) }
+            reply(owned)
+        }
+    }
+
+    private fun onPurchase(purchase: Purchase, fromBuy: Boolean) {
+        if (!purchase.products.contains(iapProductId)) return
+        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
+        if (!purchase.isAcknowledged) {
+            billing.acknowledgePurchase(
+                AcknowledgePurchaseParams.newBuilder()
+                    .setPurchaseToken(purchase.purchaseToken).build()
+            ) { _ -> }
+        }
+        if (fromBuy) replyIAP(JSONObject().apply { put("cmd", "buy"); put("ok", true) })
+    }
+
     private fun handleIAP(payload: String) {
         val o = try { JSONObject(payload) } catch (t: Throwable) { return }
         when (o.optString("cmd")) {
-            "status" -> replyIAP(JSONObject().apply {
-                put("cmd", "status"); put("owned", false); put("price", "\$1.99")
-            })
-            "restore" -> replyIAP(JSONObject().apply {
-                put("cmd", "restore"); put("ok", true); put("owned", false)
-            })
-            "buy" -> {
-                AlertDialog.Builder(this)
-                    .setTitle("Purchases coming soon")
-                    .setMessage("In-app purchases aren't available in this build yet. Nothing was charged.")
-                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
-                    .setOnDismissListener {
+            "status" -> ensureBilling {
+                billing.queryProductDetailsAsync(
+                    QueryProductDetailsParams.newBuilder().setProductList(
+                        listOf(
+                            QueryProductDetailsParams.Product.newBuilder()
+                                .setProductId(iapProductId)
+                                .setProductType(BillingClient.ProductType.INAPP)
+                                .build()
+                        )
+                    ).build()
+                ) { _, details ->
+                    cachedPrice = details.productDetailsList.firstOrNull()
+                        ?.oneTimePurchaseOfferDetails?.formattedPrice ?: cachedPrice
+                    queryOwned { owned ->
                         replyIAP(JSONObject().apply {
-                            put("cmd", "buy"); put("ok", false); put("error", "cancelled")
+                            put("cmd", "status"); put("owned", owned)
+                            put("price", cachedPrice ?: "\$1.99")
                         })
                     }
-                    .show()
+                }
+            }
+            "restore" -> ensureBilling {
+                queryOwned { owned ->
+                    replyIAP(JSONObject().apply {
+                        put("cmd", "restore"); put("ok", true); put("owned", owned)
+                    })
+                }
+            }
+            "buy" -> ensureBilling {
+                billing.queryProductDetailsAsync(
+                    QueryProductDetailsParams.newBuilder().setProductList(
+                        listOf(
+                            QueryProductDetailsParams.Product.newBuilder()
+                                .setProductId(iapProductId)
+                                .setProductType(BillingClient.ProductType.INAPP)
+                                .build()
+                        )
+                    ).build()
+                ) { result, details ->
+                    val pd: ProductDetails? = details.productDetailsList.firstOrNull()
+                    if (result.responseCode != BillingClient.BillingResponseCode.OK || pd == null) {
+                        replyIAP(JSONObject().apply {
+                            put("cmd", "buy"); put("ok", false); put("error", "not-found")
+                        })
+                        return@queryProductDetailsAsync
+                    }
+                    main.post {
+                        billing.launchBillingFlow(
+                            this,
+                            BillingFlowParams.newBuilder().setProductDetailsParamsList(
+                                listOf(
+                                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                                        .setProductDetails(pd).build()
+                                )
+                            ).build()
+                        )
+                    }
+                }
             }
         }
     }
@@ -338,14 +479,12 @@ class Narrator(
         // ear — TextToSpeech reads them aloud by name, so "🥁 Drumroll yes!" comes out
         // as "drum, drumroll yes". Recorded clips are already emoji-free; this guards
         // every line that isn't in the pack.
-        val spoken = speakable(text)
-        if (spoken.isEmpty()) { finishCurrent(); return }
-        if (ttsReady) {
-            val res = tts.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id.toString())
-            if (res != TextToSpeech.SUCCESS) finishCurrent()
-        } else {
-            finishCurrent()
-        }
+        // NO SYNTHESIZER. Every line the app speaks is pre-recorded, so if a clip
+        // is missing the right answer is silence, not a different voice. Kids heard
+        // the device robot say their name and then the real voice take over one
+        // sentence later — one voice or none, never a switch.
+        Log.d("Brainforest", "no clip for: $text")
+        finishCurrent()
     }
 
     private fun playRecorded(assetName: String): Boolean {

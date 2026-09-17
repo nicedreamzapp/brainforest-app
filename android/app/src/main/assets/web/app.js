@@ -152,8 +152,9 @@ async function buildKidPicker() {
     btn.style.setProperty("--kid-color", k.color || "#ff3aa1");
     const gradeText = k.grade === 0 ? "Kindergarten"
       : (k.grade_label ? `${k.grade_label} grade` : `Grade ${k.grade}`);
+    btn.setAttribute("aria-label", `${k.name}, ${gradeText}`);
     btn.innerHTML = `
-      <span class="kid-emoji">${k.emoji || "🌟"}</span>
+      <span class="kid-emoji" aria-hidden="true">${k.emoji || "🌟"}</span>
       <span class="kid-name">${k.name}</span>
       <span class="kid-grade">${gradeText}</span>
     `;
@@ -669,7 +670,7 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
   // of it: the name part ("Hi Tess!") is the only dynamic bit — it plays as its
   // own tiny utterance (recorded for known kids, device voice for custom names)
   // while the long sentences are always full Amy recordings.
-  speak(who.trim());
+  speak(spokenGreeting(STATE.name));   // screen still shows the real name
   speak(focusLabel
     ? `Let's practice ${focusLabel} in the ${themePretty(theme)} world!`
     : `A new treehouse quest! Answer ${STATE.questSteps} questions to climb to the top of the ${themePretty(theme)} treehouse!`);
@@ -681,19 +682,142 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
   await nextActivity();
 }
 
+// The kid's name is the only line in the app that isn't pre-recorded, and an
+// unrecorded name dropped to the device synthesizer — so a kid heard a robot say
+// their name and the real voice take over one sentence later. We record the
+// common names; anything else greets with a plain recorded "Hi!" so the voice
+// NEVER switches mid-greeting.
+let RECORDED_NAMES = null;
+fetch("voice/names.json").then(r => r.json())
+  .then(list => { RECORDED_NAMES = new Set(list.map(n => String(n).toLowerCase())); })
+  .catch(() => { RECORDED_NAMES = new Set(); });
+
+function spokenGreeting(name) {
+  const n = String(name || "").trim();
+  if (!n) return "Hi!";
+  if (RECORDED_NAMES && RECORDED_NAMES.has(n.toLowerCase())) return `Hi ${n}!`;
+  return "Hi!";
+}
+
 // Convert UPPERCASE words to TitleCase so TTS doesn't spell them letter-by-letter
 function ttsFriendly(text) {
   if (!text) return text;
   return String(text).replace(/\b[A-Z]{2,}\b/g, w => w[0] + w.slice(1).toLowerCase());
 }
 
+// ── One question, one model ────────────────────────────────────────────────
+// Every activity carries three text fields — say / title / prompt — and the
+// content has NO contract about what each one means. The same field is the word
+// problem on one screen, a topic heading on the next, a reworded restatement of
+// the question on a third:
+//
+//   48 students : say=instruction   title=the word problem  prompt=the ask
+//   Emma        : say=word problem  title=the SAME problem  prompt=the ask
+//   tranquil    : say=the ask       title=topic heading     prompt=the ask again
+//   2 x 2       : say=the ask       title=math notation     prompt="Tap the answer!"
+//
+// So no rule about "the prompt" can be right. Instead, classify all three fields
+// into what they actually ARE, once, and let both the screen and the voice read
+// off that. This is what keeps a question from showing up as three separate
+// things scattered over the artwork.
+const EMOJI_PLACEHOLDER = /\{EMOJI\}/i;
+const INSTRUCTION_RE =
+  /^(click|tap|find|pick|choose|drag|trace|say|type|write|spell|read|look|count|figure out|calculate|solve|listen)\b/i;
+const STOPWORDS = new Set(("a an the is are was were do does did to of in on for that this " +
+  "these those it its and or you your with what which how many much be been am i we they he she").split(" "));
+
+function realWords(t) { return String(t || "").match(/[A-Za-z]{2,}/g) || []; }
+
+// A `title` with no sentence-ending punctuation and only a few words is a
+// decorative heading — "Use Tranquil in Context", "Synonym for happy" — not a
+// sentence. "What fraction is green?" ends in punctuation, so it stays content.
+function isHeading(v) { return !/[.?!]\s*$/.test(v) && realWords(v).length <= 6; }
+
+// Does b just reword a? Compares meaning-carrying words only, so "Pick the
+// sentence that uses tranquil correctly" swallows "Which sentence uses tranquil
+// correctly?" — 81 activities restate their own question this way.
+function rewords(a, b) {
+  const set = t => new Set(String(t || "").toLowerCase().match(/[a-z']+/g)
+                     ?.filter(w => !STOPWORDS.has(w)) || []);
+  const A = set(a), B = set(b);
+  if (!B.size) return false;
+  let hit = 0;
+  B.forEach(w => { if (A.has(w)) hit++; });
+  return hit / B.size >= 0.8;
+}
+
+// Returns { heading, context, ask }.
+//   heading — decorative, drawn big, NEVER spoken (math notation, emoji, topics)
+//   context — the setup or passage, may be absent
+//   ask     — the one sentence that asks something; every activity has one
+function classifyQuestion(payload) {
+  const s = payload?.screen || {};
+  let heading = null;
+  const cands = [];
+  for (const [name, raw] of [["say", payload?.say], ["title", s.title], ["prompt", s.prompt]]) {
+    const v = String(raw || "").trim();
+    if (!v) continue;
+    const decorative = EMOJI_PLACEHOLDER.test(v) || realWords(v).length < 3
+                       || (name === "title" && isHeading(v));
+    if (decorative) { heading = heading || v; continue; }
+    cands.push(v);
+  }
+  const asks = cands.filter(v => /\?\s*$/.test(v));
+  let ask = asks.length ? asks.reduce((a, b) => (b.length > a.length ? b : a)) : null;
+  let rest = cands.filter(v => v !== ask);
+  if (!ask) {
+    const prose = rest.filter(v => !INSTRUCTION_RE.test(v));
+    ask = prose[0] || rest[0] || null;
+    rest = rest.filter(v => v !== ask);
+  }
+  const context = rest.find(v => !INSTRUCTION_RE.test(v) && !rewords(v, ask)) || null;
+  return { heading, context, ask };
+}
+
+// Speak the question exactly as the bubble reads it: context, then the ask.
+// Two utterances rather than one joined string — the narrator queues them back
+// to back so it sounds continuous, while each half still matches its own clip in
+// the recorded voice pack.
+function speakQuestion(payload, interrupt) {
+  const { context, ask } = classifyQuestion(payload);
+  const parts = [context, ask].filter(Boolean);
+  if (!parts.length) parts.push("Here we go!");
+  let last = null;
+  parts.forEach((part, i) => {
+    last = (i === 0 && interrupt ? speakNow : speak)(ttsFriendly(part));
+  });
+  // Return the LAST utterance's promise so `await speakQuestion(...)` means the
+  // whole question is finished, not just its first piece.
+  return last;
+}
+
+// Feedback must NEVER destroy the question. The question now lives in the bubble,
+// so writing feedback over it left a kid who answered wrong being told "look
+// again" with nothing left on screen to look at. Feedback gets its own slot above
+// the question; renderActivity clears the whole bubble for the next one.
+function setBubbleFeedback(text) {
+  const said = $("said");
+  if (!said) return;
+  let fb = said.querySelector(".q-feedback");
+  if (!fb) {
+    fb = document.createElement("span");
+    fb.className = "q-feedback";
+    said.insertBefore(fb, said.firstChild);
+  }
+  fb.textContent = text || "";
+}
+
 // "Say again" — cancel anything in flight and replay the CURRENT activity prompt
 // (not whatever happened to be the last queued utterance). This is what the kid
 // actually wants when she taps the repeat button.
 function repeatCurrent() {
-  const text = STATE.current?.say || STATE.lastSpoken || "";
-  if (!text) return;
-  speakNow(ttsFriendly(text));  // interrupt + replay
+  const rb = $("repeat-btn");
+  if (rb) { rb.classList.add("speaking"); setTimeout(() => rb.classList.remove("speaking"), 1800); }
+  if (STATE.current?.say || contentTitle(STATE.current) || contentPrompt(STATE.current)) {
+    speakQuestion(STATE.current, true);   // interrupt + replay, question included
+    return;
+  }
+  if (STATE.lastSpoken) speakNow(ttsFriendly(STATE.lastSpoken));
 }
 
 function themePretty(t) {
@@ -930,7 +1054,7 @@ async function nextActivity() {
   renderActivity(payload);
   prefetchNext();
   // Speak the NEW prompt immediately (queue was already cleared above).
-  speak(ttsFriendly(payload.say || "Here we go!"));
+  speakQuestion(payload, false);
   startDriftTimer();
 }
 
@@ -1292,7 +1416,31 @@ function renderActivity(p) {
     p.screen.title = _kidify(p.screen.title);
     p.screen.prompt = _kidify(p.screen.prompt);
   }
-  $("said").textContent = p.say || "";
+  // The pill carries the whole question: setup on top, the ask bolded under it.
+  // Nothing about the question is drawn anywhere else — a question split across a
+  // bubble, a card and purple text floating on the artwork read as three separate
+  // things and the floating line had no background to be legible against.
+  const q = classifyQuestion(p);
+  const said = $("said");
+  said.textContent = "";
+  said.classList.toggle("has-context", !!(q.context && q.ask));
+  if (q.context) {
+    const ctx = document.createElement("span");
+    ctx.className = "q-context";
+    ctx.textContent = q.context;
+    said.appendChild(ctx);
+  }
+  if (q.ask) {
+    const ask = document.createElement("span");
+    ask.className = "q-ask";
+    ask.textContent = q.ask;
+    said.appendChild(ask);
+  }
+  // Only hint at scrolling when the question actually overflows its pill —
+  // a permanent "more" arrow on a two-line question would just be noise.
+  requestAnimationFrame(() => {
+    said.classList.toggle("is-scrollable", said.scrollHeight > said.clientHeight + 4);
+  });
   // Bubble itself is tappable to repeat
   const bubble = document.querySelector(".bubble");
   if (bubble && !bubble.__wired) {
@@ -1311,27 +1459,24 @@ function renderActivity(p) {
     STATE.theme = theme;
   }
 
-  if (s.title) {
+  // Only the decorative heading lives out here now — math notation like
+  // "2 x 2 = ?", the countable emoji row, a topic title. It is never spoken.
+  if (q.heading) {
     const h = document.createElement("h2");
     h.className = "title-big";
     if (s.type === "image_word") h.classList.add("count-card");
-    // Reading-comp paragraphs are sentences, not single words — render readable, not giant.
-    if (s.type === "reading_comp" || (s.title && s.title.length > 60)) {
-      h.classList.add("paragraph");
-    }
-    h.textContent = s.title;
+    // 18 counting activities carry a literal "{EMOJI} {EMOJI}" placeholder that
+    // nothing in the offline bundle ever substituted — the kid was told "count
+    // them" and shown the placeholder text. One token per object to count, so
+    // swapping each for the theme emoji also preserves the answer.
+    h.textContent = String(q.heading).replace(/\{EMOJI\}/gi, themeEmoji());
     c.appendChild(h);
-
-    // Auto-visual layer: render emoji groups under the title that illustrate
-    // the question (math: actual countable objects; sight words: themed icon).
+  }
+  {
+    // Auto-visual layer: emoji groups that illustrate the question (math: actual
+    // countable objects; sight words: themed icon).
     const visual = buildQuestionVisual(s);
     if (visual) c.appendChild(visual);
-  }
-  if (s.prompt) {
-    const pr = document.createElement("p");
-    pr.className = "prompt-line";
-    pr.textContent = s.prompt;
-    c.appendChild(pr);
   }
   if (s.scene) {
     const se = document.createElement("div");
@@ -1367,6 +1512,8 @@ function renderActivity(p) {
       const lbl = document.createElement("span");
       lbl.className = "option-label";
       lbl.textContent = label;
+      // Screen readers get the plain word even when the label is an emoji.
+      b.setAttribute("aria-label", `Answer: ${label}`);
       // Speaker zone removed — the WHOLE button chooses the answer. Listening
       // happens through the single "Read to me" pill under the options.
       b.appendChild(lbl);
@@ -1375,19 +1522,23 @@ function renderActivity(p) {
     });
     c.appendChild(opts);
 
-    // One clear "listen" control for pre-readers: reads every choice in order.
-    // Two easy words on it — these are kids reading it.
+    // One clear "listen" control for pre-readers: the question, then every choice
+    // in order. Two easy words on it — these are kids reading it.
+    // The question comes FIRST on purpose. Reading four bare answers to a child
+    // who never heard the question is what made this button feel like noise.
     if (STATE.voiceOn && s.items.length && p.expects === "tap") {
       const hear = document.createElement("button");
       hear.className = "hear-btn";
-      hear.setAttribute("aria-label", "Read the choices to me");
-      hear.innerHTML = `<span>🔊</span><span>Read to me</span>`;
+      hear.setAttribute("aria-label", "Read the answer choices to me");
+      hear.innerHTML = `<span>🔊</span><span>Read answers</span>`;
       hear.addEventListener("click", async (ev) => {
         ev.stopPropagation();
         if (hear.__busy) return;
         hear.__busy = true;
         hear.classList.add("speaking");
         try {
+          // Reads ONLY the choices — the question has its own labelled button
+          // right under it, so each control does exactly what its label says.
           for (const item of s.items) {
             const say_ = (typeof item === "string") ? item
               : (item.word || item.value || item.label || "");
@@ -1522,12 +1673,15 @@ function postAttempt(got, correct) {
 }
 
 const TRY_AGAIN_HINTS = [
-  "Not that one — look again, you got this!",
-  "Hmm, try a different one!",
-  "So close! Pick another answer.",
-  "Take your time and look at each one.",
-  "Good thinking — now try another!",
-];
+    "Not quite — try again!",
+    "Almost! Take another look.",
+    "Good try — pick another answer.",
+    "Take your time and try again.",
+    "Close one! Give it another try.",
+    "Try a different answer — you've got this!",
+    "Nearly! Have another go.",
+    "Look once more, then choose."
+  ];
 
 async function onTap(value, btn) {
   if (STATE.grading) return;
@@ -1558,7 +1712,7 @@ async function onTap(value, btn) {
     btn.style.pointerEvents = "none";
     btn.style.opacity = "0.4";
     const hint = TRY_AGAIN_HINTS[Math.floor(Math.random() * TRY_AGAIN_HINTS.length)];
-    $("said").textContent = hint;
+    setBubbleFeedback(hint);   // question stays on screen so she can try again
     speakNow(hint);
     startDriftTimer();
     return;
@@ -1627,7 +1781,7 @@ async function finalize(got, correct, feedback) {
 
   // VISIBLE feedback — flash a card overlay and update bubble FIRST, then play audio
   const phrase = correct ? pickPraise(feedback) : pickGentleTry(feedback);
-  $("said").textContent = phrase;
+  setBubbleFeedback(phrase);
   flashFeedbackCard(correct, correct ? "✓" : "Next one!");
 
   if (correct) {
@@ -1690,33 +1844,255 @@ function flashFeedbackCard(correct, label) {
 
 function pickPraise(extra) {
   const p = [
-    "🎉 Yes!", "⭐ Nailed it!", "✨ You got it!", "🔥 Awesome!", "💥 Boom!", "🙌 Right on!",
-    "🚀 Way to go!", "🧠 Brilliant!", "🎯 Bingo!", "✨ Sparkle work!", "🔥 You're on fire!",
-    "🤩 Wow!", "🌟 Stellar!", "👀 Look at you go!", "🍪 Smart cookie!", "🖐 High five!",
-    "👑 Magnificent!", "💪 Crushed it!", "🌈 Beautiful!", "🎯 Bullseye!", "🎊 Yes yes yes!",
-    "🏆 Top notch!", "🪙 Pure gold!", "✅ That's the one!", "💎 Rock solid!", "💯 Perfect!",
-    "💡 Lightbulb!", "💨 Whoosh!", "🧠 Big brain!", "🎯 Right on the dot!", "💥 Pow!",
-    "🦄 Unicorn move!", "🚀 Blast off!", "🎈 Lifted off!", "🌟 Superstar!", "🥳 Party time!",
-    "🦁 Lion smart!", "🐯 Tiger sharp!", "🦊 Foxy thinking!", "🐉 Dragon brain!", "🦅 Eagle eye!",
-    "🎸 Rockstar!", "🎤 Mic drop!", "🎬 Take a bow!", "👏 Bravo!", "💐 Bouquet for you!",
-    "🌻 Sun-bright!", "🍯 Sweet!", "🍓 Berry good!", "🍕 Slice of brilliance!", "🍩 Donut doubt it!",
-    "🌟 Starshine!", "✨ Magic!", "🪄 Spellbound!", "🧚 Fairy-tale work!", "🌙 Moonshot!",
-    "☀️ Sunshine smart!", "⚡ Zap! Got it!", "🌊 Wave of wow!", "🏄 Surf's up!", "🎯 Dead on!",
-    "🎵 In tune!", "🥁 Drumroll yes!", "🎺 Trumpet it!", "🎻 Sweet music!", "🧨 Mind blown!",
-    "🪅 Piñata burst!", "🌋 Volcano power!", "🦋 Butterfly brain!", "🐬 Dolphin clever!", "🐢 Wise turtle!",
-    "🐝 Bee brilliant!", "🦉 Owl smart!", "🐧 Penguin perfect!", "🦒 Tall thinking!", "🦓 Striped genius!",
-    "🌈 Rainbow right!", "☁️ Cloud nine!", "🍀 Lucky pick!", "🪷 Lotus level!", "🌺 Tropical smart!",
-    "🥇 Gold medal!", "🏅 Hall of fame!", "🎖️ Honors!", "🎓 Class act!", "📚 Book smart!",
-    "✏️ Sharp pencil!", "🔑 Key thinker!", "🔦 Bright spark!", "🎨 Picasso brain!", "🖌️ Stroke of genius!",
-    "🚂 Choo choo champ!", "🛸 Out of this world!", "🛼 Roll on!", "⛷️ Downhill speed!", "🏂 Air time!",
-    "🤸 Flip and fly!", "🤾 Goal!", "⚽ Score!", "🥋 Black belt brain!", "🏹 Right on target!",
-    "🌠 Shooting star!", "🌌 Galaxy good!", "🦕 Dino strong!", "🐙 Eight thumbs up!"
+    "✅ Correct!",
+    "✅ Right answer!",
+    "✅ That's correct!",
+    "✅ You got it right!",
+    "✅ Yes, that's right!",
+    "✅ Correct answer!",
+    "✅ That's the right one!",
+    "✅ Right!",
+    "✅ Yes! Correct!",
+    "✅ You picked the right one!",
+    "✅ That's right!",
+    "✅ Exactly right!",
+    "✅ Absolutely right!",
+    "✅ Right on the money!",
+    "✅ You chose correctly!",
+    "👍 Good one!",
+    "👍 Good job!",
+    "👍 Nice work!",
+    "👍 Well done!",
+    "👍 That's the right answer!",
+    "👍 Good answer!",
+    "👍 Nicely done!",
+    "👍 You did that well!",
+    "👍 Great pick!",
+    "👍 That's it!",
+    "👍 Good choice!",
+    "👍 Nice pick!",
+    "👍 You got that one!",
+    "👍 Solid work!",
+    "👍 Good work!",
+    "⭐ Great job!",
+    "⭐ Very good!",
+    "⭐ Excellent!",
+    "⭐ Perfect answer!",
+    "⭐ Great work!",
+    "⭐ Super job!",
+    "⭐ Wonderful job!",
+    "⭐ Terrific!",
+    "⭐ Marvelous!",
+    "⭐ Splendid!",
+    "🎉 You're right!",
+    "🎉 You got it!",
+    "🎉 That's the one!",
+    "🎉 Yes! You did it!",
+    "🎉 Hooray! Correct!",
+    "🎉 You did it!",
+    "🎉 That's exactly it!",
+    "🎉 Woohoo! Right!",
+    "🎉 Yes indeed!",
+    "🎉 Nailed the answer!",
+    "😀 Good thinking!",
+    "😀 Nice job!",
+    "😀 Smart choice!",
+    "😀 You knew that one!",
+    "😀 That's right, good job!",
+    "😀 You figured that out!",
+    "😀 Clever choice!",
+    "😀 Well thought out!",
+    "😀 That's the answer!",
+    "🙌 Way to go!",
+    "🙌 Great answer!",
+    "🙌 You nailed it!",
+    "🙌 Awesome job!",
+    "🙌 Fantastic job!",
+    "🧠 Smart answer!",
+    "🧠 You figured it out!",
+    "🧠 Good brain work!",
+    "🧠 Sharp thinking!",
+    "🧠 Clear thinking!",
+    "🌟 Fantastic!",
+    "🌟 Super!",
+    "🌟 Beautiful work!",
+    "🌟 Outstanding!",
+    "🌟 First rate!",
+    "💯 100% right!",
+    "💯 All correct!",
+    "💯 Perfectly done!",
+    "✔️ Spot on!",
+    "✔️ Just right!",
+    "✔️ Dead right!",
+    "✔️ Bang on!",
+    "✔️ Precisely!",
+    "✔️ You matched it!",
+    "✔️ That checks out!",
+    "⭐ Nailed it!",
+    "🔥 Awesome!",
+    "💥 Boom!",
+    "🚀 Way to go!",
+    "🧠 Brilliant!",
+    "🎯 Bingo!",
+    "🔥 You're on fire!",
+    "🤩 Wow!",
+    "🌟 Stellar!",
+    "👀 Look at you go!",
+    "🍪 Smart cookie!",
+    "🖐 High five!",
+    "👑 Magnificent!",
+    "💪 Crushed it!",
+    "🎯 Bullseye!",
+    "🏆 Top notch!",
+    "🪙 Pure gold!",
+    "💎 Rock solid!",
+    "💡 Lightbulb!",
+    "🧠 Big brain!",
+    "🚀 Blast off!",
+    "🌟 Superstar!",
+    "🥳 Party time!",
+    "🎸 Rockstar!",
+    "🎬 Take a bow!",
+    "👏 Bravo!",
+    "🏄 Surf's up!",
+    "🧨 Mind blown!",
+    "🥇 Gold medal!",
+    "🏅 Hall of fame!",
+    "🎓 Class act!",
+    "📚 Book smart!",
+    "🛸 Out of this world!",
+    "⚽ Score!",
+    "🏹 Right on target!",
+    "🦕 Dino strong!",
+    "🦅 Eagle eye!",
+    "🍯 Sweet!",
+    "🐝 Bee brilliant!",
+    "🦉 Owl smart!",
+    "🐯 Tiger sharp!",
+    "🐉 Unstoppable!",
+    "🌺 Lovely work!",
+    "🎨 Creative thinking!",
+    "🦋 Beautiful thinking!",
+    "🌊 Making waves!",
+    "🧚 Wonderful!",
+    "🪄 Like magic!",
+    "☀️ You're glowing!",
+    "🌈 Colorful thinking!",
+    "🚂 Full steam ahead!",
+    "✏️ Sharp pencil!",
+    "☁️ Cloud nine!",
+    "🍀 Lucky pick!",
+    "🏂 You're flying!",
+    "🥋 Master move!",
+    "🎈 Levelled up!",
+    "🎵 In tune!",
+    "🌟 You're a star!",
+    "🌻 You brightened my day!",
+    "🎁 What a gift!",
+    "🌞 Bright as day!",
+    "🐬 Sharp!",
+    "🔦 Bright spark!",
+    "🗝️ Key thinker!",
+    "🎖️ Honors!",
+    "🌠 Shooting star!",
+    "🎊 Yes yes yes!",
+    "💨 Whoosh!",
+    "🧁 Sweet success!",
+    "✅ You answered correctly!",
+    "✅ That is the right answer!",
+    "✅ Yes! You got it!",
+    "👍 Very nice!",
+    "👍 Great choice!",
+    "👍 Good going!",
+    "👍 That's right!",
+    "⭐ Beautifully done!",
+    "⭐ Lovely job!",
+    "⭐ Really good work!",
+    "⭐ Impressive!",
+    "🎉 Correct! Nice one!",
+    "🎉 You did that perfectly!",
+    "🎉 Right on!",
+    "😀 You knew it!",
+    "😀 Great thinking there!",
+    "😀 That was smart!",
+    "🙌 Excellent work!",
+    "🙌 Beautiful answer!",
+    "🧠 Very clever!",
+    "🧠 Good reasoning!",
+    "🌟 Brilliant work!",
+    "🌟 Superb!",
+    "🌟 Top marks!",
+    "🌟 Really well done!",
+    "💡 Good idea!",
+    "📗 You've learned that one!",
+    "🏅 Great effort and correct!",
+    "🎈 That's the answer!",
+    "🌞 Nicely figured out!",
+    "🧩 It fits perfectly!",
+    "🍀 Good instinct!",
+    "🎵 Right in tune!",
+    "🖊️ Neatly done!",
+    "📘 You remembered it!"
   ];
   return (extra ? extra + " " : "") + p[Math.floor(Math.random()*p.length)];
 }
 function pickGentleTry(extra) {
   const p = [
-    "💪 Almost!", "🌱 Good try!", "🤏 So close!", "🌟 Close one!",
+    "🔁 Not quite — try again!",
+    "🔁 Almost! Try again.",
+    "🔁 Let's try that again.",
+    "🔁 Give it another try!",
+    "🔁 Have another go!",
+    "🔁 One more try!",
+    "🔁 Try one more time!",
+    "🔁 Try a different answer.",
+    "🔁 Pick another answer.",
+    "🔁 Let's go again.",
+    "🔁 Another try!",
+    "🙂 Good try — try again!",
+    "🙂 Nice try — go again!",
+    "🙂 That's okay — try again.",
+    "🙂 No worries — try again.",
+    "🙂 It's okay! Try again.",
+    "🙂 Everyone misses one — try again.",
+    "🙂 Not this time — try again!",
+    "🙂 All good — try again.",
+    "🙂 Happens to everyone — go again.",
+    "👀 Take another look.",
+    "👀 Look at the answers again.",
+    "👀 Look again and try.",
+    "👀 Check them once more.",
+    "👀 Have a closer look.",
+    "👀 One more look!",
+    "📖 Read it again, then try.",
+    "📖 Let's read it once more.",
+    "📖 Go back and read it again.",
+    "🤔 Close! Pick another one.",
+    "🤔 You're close — try again.",
+    "🤔 Think about it and try again.",
+    "🤔 That's a tricky one — try again.",
+    "🤔 Hmm — take another guess.",
+    "🤔 Think it through and try.",
+    "💪 You can do it — try again!",
+    "💪 Keep going — try again!",
+    "💪 You'll get it — try again!",
+    "💪 Almost there — try again!",
+    "💪 Don't give up — try again!",
+    "💪 Stay with it — try again!",
+    "⏳ Take your time and try again.",
+    "⏳ Slow down and try again.",
+    "⏳ No rush — go again.",
+    "🤝 Let's find it together — try again.",
+    "🌱 Good thinking — try again.",
+    "🌟 So close — try again!",
+    "🎯 Try another one!",
+    "🎯 Aim again!",
+    "🧭 Let's find the right one.",
+    "💬 Say it out loud, then try.",
+    "💪 Almost!",
+    "🌱 Good try!",
+    "🤏 So close!",
+    "🌟 Close one!",
     "🤔 Tricky one — let's look again.",
     "🧠 Brain warming up — go again.",
     "💭 You're thinking — that's what counts.",
@@ -1725,96 +2101,49 @@ function pickGentleTry(extra) {
     "🫶 No worries — let's try again together.",
     "🌈 It happens — one more shot.",
     "🦊 Sneaky one — try once more.",
-    "💪 You got this — try again.",
-    "🪜 Almost there — let's check it once more.",
-    "✨ Cool — pick again.",
-    "👁️ Hmm, take another look.",
+    "🪜 Almost — check it once more.",
+    "✨ All good — pick again.",
     "🌻 Keep going — you're growing!",
     "🐌 Slow and steady — try again.",
-    "🛟 Safety net here — try once more.",
-    "🐝 Buzz again — give it another go.",
-    "🌊 Ride the wave — try once more.",
-    "🚪 Try the next door!",
-    "🧩 One more puzzle piece — try again.",
-    "🪶 Lightly does it — pick again.",
-    "🔁 Loop back, try again.",
-    "🍀 Lucky try coming up.",
-    "🌷 Bloom again — give it another try.",
-    "📖 Page two — try once more.",
-    "🚲 Pedal again, you got it.",
+    "🛟 I've got you — try once more.",
+    "🍀 Next one's yours.",
     "🦉 Take a wise second look.",
-    "🛌 Stretch, then try again.",
-    "🌞 Bright eyes — pick again.",
-    "🐢 Steady wins — one more time.",
-    "🐬 Splash back in!",
-    "🦋 Try a new flap.",
-    "🦄 Magic still works — try again.",
-    "🪀 Yo yo back — give it another try.",
-    "🦘 Hop back, try again.",
-    "🚀 Reset launch — try again.",
-    "🎯 Aim and try again.",
-    "🌬️ Take a breath — try again.",
-    "🍓 Sweet idea — try once more.",
+    "🌞 Fresh look — pick again.",
+    "🐢 One more time.",
+    "🦄 You've still got this.",
+    "🌬️ Breathe — then try again.",
     "🧗 Climb again — you're close.",
-    "🛹 Roll back, try again.",
-    "🎈 Float back, try again.",
     "🐌 No rush — try again.",
-    "🌿 Rooted in — try once more.",
-    "🦁 Brave heart — try again.",
-    "🐧 Waddle back — give it a go.",
-    "🌌 Stars are watching — try again.",
-    "🌳 Branch out — try again.",
-    "🍵 Sip and think — pick again.",
+    "🦁 Be brave — try again.",
     "🪞 Look again with fresh eyes.",
-    "🐠 Swim around — try once more.",
     "🐰 Hop again, you got this!",
-    "🐢 Inch closer — try again.",
-    "🐝 Buzzing toward it — one more!",
-    "🪴 Growing your smarts — try again.",
-    "📐 Measure twice, tap again.",
+    "🐢 You're getting closer.",
+    "🪴 You're learning — try again.",
     "🔭 Take a second look.",
-    "🎒 Pack it in, try again.",
-    "🎵 Hum it out — try again.",
-    "🪁 Catch the wind — try once more.",
-    "🧦 Pair it up — try again.",
-    "🍂 Fall and rise — try again.",
-    "🛶 Paddle back — try again.",
-    "🐉 Mighty try — one more!",
-    "🐢 Don't give up — try again.",
-    "🐦 Tweet and try!",
-    "🍋 Squeeze it again, you got this.",
-    "🪅 Swing again!",
-    "🎁 Unwrap it — try once more.",
-    "🦔 Cozy try — one more.",
-    "🐞 Lucky ladybug — try again.",
-    "🌷 Spring back — try again.",
-    "🦒 Stretch tall, try again.",
-    "🦝 Sneaky one — try again.",
-    "🌟 Almost shining — try again.",
-    "🧙 One more wand wave!",
-    "🥧 Bake it again, try once more.",
-    "🐳 Big think — try again.",
-    "🌊 Catch the next wave!",
-    "🪨 Steady stone — try again.",
-    "🧗 One more reach!",
-    "🪂 Soft landing — try again.",
-    "🛹 Push off again!",
-    "🛼 Glide back — try once more.",
-    "🚲 Hop on, try again.",
-    "🚂 Chug along, try again.",
-    "🛻 Reverse and try again.",
-    "🚜 Plow forward — try again.",
-    "🦓 Stripes of courage — try again.",
-    "🐘 Memory check — try again.",
-    "🐼 Calm try — one more!",
-    "🦦 Otter you can do it!",
-    "🦥 No rush, try again.",
-    "🐿️ Squirrel sharp — try again.",
-    "🦔 Roll back — try again.",
-    "🐇 Quick hop, try again.",
-    "🐸 Leap again!",
-    "🦜 Squawk it — try once more.",
-    "🌎 Spin and try once more."
+    "🦦 You can do it!",
+    "🐼 Stay calm — one more!",
+    "🪂 No worries — try again.",
+    "🌊 Get the next one!",
+    "🐝 You're close — one more!",
+    "🧸 It's alright — try again.",
+    "🕯️ Almost lit — try again.",
+    "🌵 Tough one — try again.",
+    "🍎 Fresh try coming up!",
+    "🔁 Let's have another go.",
+    "🔁 Try once more.",
+    "🔁 Go ahead and try again.",
+    "🙂 That's alright — try again.",
+    "🙂 Good effort — try again.",
+    "🙂 Nearly! Try again.",
+    "👀 Have another look at them.",
+    "🤔 Think once more, then choose.",
+    "💪 Give it one more shot!",
+    "💪 You're nearly there!",
+    "⏳ There's no hurry — try again.",
+    "🌱 Learning takes tries — go again.",
+    "🌟 Very close — try again!",
+    "🎯 Choose a different one.",
+    "📖 Look back and try again."
   ];
   // The answer was already revealed visually + spoken on the question itself,
   // so no "The answer is X" here — it would land on the NEXT question.
@@ -1872,8 +2201,9 @@ function fireConfetti() {
   const W = canvas.width = window.innerWidth;
   const H = canvas.height = window.innerHeight;
   const colors = ["#ff3aa1","#6b4eff","#00b894","#ffd166","#4ea8ff","#ff8a4d"];
+  const lite = !!(window.BF_PERF && BF_PERF.isLite());
   const pieces = [];
-  for (let i = 0; i < 140; i++) {
+  for (let i = 0; i < (lite ? 48 : 140); i++) {
     pieces.push({
       x: W/2 + (Math.random()-0.5)*200,
       y: H/2 + (Math.random()-0.5)*100,
@@ -1895,10 +2225,11 @@ function fireConfetti() {
       p.vy += p.g;
       p.x += p.vx; p.y += p.vy; p.r += p.vr;
       if (p.y < H + 40) alive++;
+      ctx.fillStyle = p.color;
+      if (lite) { ctx.fillRect(p.x - p.size/2, p.y - p.size/4, p.size, p.size*0.5); continue; }
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.r);
-      ctx.fillStyle = p.color;
       ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.5);
       ctx.restore();
     }
@@ -1911,7 +2242,10 @@ function fireConfetti() {
 // (Floating theme creatures removed — they confused counting activities.)
 
 function flashFeedback(msg, ok) {
-  $("said").textContent = msg;
+  // Also feedback — must not wipe the question. This one carries the idle nudge
+  // ("Take your time and look at each one.") and mic errors, both of which fire
+  // WHILE a question is on screen waiting to be answered.
+  setBubbleFeedback(msg);
 }
 
 // ---- Drift detection ----
@@ -1965,11 +2299,30 @@ function advance() { nextActivity(); }
 // ============================================================
 (function () {
   const TRIAL_DAYS = 60;
+  const GRACE_DAYS = 7;    // breathing room when the store can't be reached
   const iapNative = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bfIAP;
   const send = (cmd) => { try { iapNative && iapNative.postMessage({ cmd }); } catch (_) {} };
 
   let PRICE = "$1.99";
   let pendingBuy = null, pendingRestore = null;
+  let storeReady = null;            // null = haven't heard back yet
+  const storeWaiters = [];
+
+  function setStoreReady(ok) {
+    storeReady = !!ok;
+    while (storeWaiters.length) storeWaiters.shift()(storeReady);
+  }
+
+  // Resolves as soon as StoreKit answers, or false if it never does. A child
+  // must never be left staring at a locked door because the App Store is
+  // unreachable — offline, a network hiccup, or a product that won't load.
+  function whenStoreKnown(ms = 4000) {
+    return new Promise((resolve) => {
+      if (storeReady !== null) return resolve(storeReady);
+      storeWaiters.push(resolve);
+      setTimeout(() => resolve(storeReady === null ? false : storeReady), ms);
+    });
+  }
 
   window.__bfIAP = {
     result(r) {
@@ -1977,6 +2330,7 @@ function advance() { nextActivity(); }
       if (r.cmd === "status") {
         if (r.price) PRICE = r.price;
         if (r.owned) markOwned();
+        setStoreReady(r.loaded);
         const pb = document.getElementById("bf-buy-btn");
         if (pb) pb.textContent = "Unlock forever — " + PRICE;
       } else if (r.cmd === "buy" && pendingBuy) {
@@ -2006,7 +2360,8 @@ function advance() { nextActivity(); }
     ["What is 8 × 6 + 9?", 57], ["What is 7 × 9 + 8?", 71],
   ];
 
-  function buildGate() {
+  function buildGate(opts) {
+    opts = opts || {};
     if (document.getElementById("unlock-gate")) return;
     const g = document.createElement("div");
     g.id = "unlock-gate";
@@ -2016,6 +2371,7 @@ function advance() { nextActivity(); }
         <h2>Your free adventure is complete!</h2>
         <p>You explored Brainforest free for ${TRIAL_DAYS} days.<br>It's only <b>${PRICE}</b> to keep it going <b>forever</b> — ask a grown-up!</p>
         <button class="ug-main" id="ug-grownup">I'm a grown-up</button>
+        <button class="ug-link" id="ug-code-open">I have a code</button>
       </div>
       <div class="ug-card hidden" id="ug-gate">
         <h2>Grown-ups only</h2>
@@ -2036,16 +2392,38 @@ function advance() { nextActivity(); }
         </ul>
         <button class="ug-main" id="bf-buy-btn">Unlock forever — ${PRICE}</button>
         <button class="ug-link" id="ug-restore">Restore Purchases</button>
+        <button class="ug-link" id="ug-code-open2">I have a code</button>
         <p class="ug-note hidden" id="ug-msg"></p>
+        <button class="ug-link hidden" id="ug-later">Keep learning for now</button>
         <p class="ug-fine">One-time purchase. No recurring charges, ever.</p>
+      </div>
+      <div class="ug-card hidden" id="ug-code-card">
+        <div class="ug-emoji">🔑</div>
+        <h2>Enter your code</h2>
+        <p>Type the code you were given and Brainforest is yours for good.</p>
+        <div class="ug-code" id="ug-code-row">
+          <input id="ug-code" type="text" autocapitalize="characters" autocorrect="off"
+                 autocomplete="off" spellcheck="false" enterkeyhint="go"
+                 placeholder="Your code" aria-label="Unlock code">
+          <button class="ug-main" id="ug-code-go">Unlock</button>
+        </div>
+        <p class="ug-note hidden" id="ug-code-msg"></p>
+        <button class="ug-link" id="ug-code-back">back</button>
       </div>`;
     document.body.appendChild(g);
 
     const show = (id) => {
-      ["ug-kid", "ug-gate", "ug-buy"].forEach(x =>
+      ["ug-kid", "ug-gate", "ug-buy", "ug-code-card"].forEach(x =>
         document.getElementById(x).classList.toggle("hidden", x !== id));
     };
     let expected = null;
+    const askQuestion = () => {
+      const [q, a] = GATE_QS[Math.floor(Math.random() * GATE_QS.length)];
+      expected = a;
+      document.getElementById("ug-q").textContent = q;
+      document.getElementById("ug-answer").value = "";
+      show("ug-gate");
+    };
     // debug: jump straight to a card for screenshots (BF_GATE_STEP=gate|buy)
     if (window.__BF_GATE_STEP === "gate") {
       const [q, a] = GATE_QS[0]; expected = a;
@@ -2053,19 +2431,23 @@ function advance() { nextActivity(); }
       show("ug-gate");
     } else if (window.__BF_GATE_STEP === "buy") {
       show("ug-buy"); send("status");
+    } else if (window.__BF_GATE_STEP === "code") {
+      show("ug-code-card");          // BF_GATE_STEP=code — screenshot the gift-code card
+    } else if (opts.start === "gate") {
+      // Opened from the parent dashboard mid-trial: skip the trial-over card,
+      // go straight to the grown-ups question.
+      askQuestion();
     }
-    document.getElementById("ug-grownup").addEventListener("click", () => {
-      const [q, a] = GATE_QS[Math.floor(Math.random() * GATE_QS.length)];
-      expected = a;
-      document.getElementById("ug-q").textContent = q;
-      document.getElementById("ug-answer").value = "";
-      show("ug-gate");
+    document.getElementById("ug-grownup").addEventListener("click", askQuestion);
+    document.getElementById("ug-back1").addEventListener("click", () => {
+      if (opts.dismissible) g.remove(); else show("ug-kid");
     });
-    document.getElementById("ug-back1").addEventListener("click", () => show("ug-kid"));
     document.getElementById("ug-check").addEventListener("click", () => {
       if (Number(document.getElementById("ug-answer").value) === expected) {
         show("ug-buy");
         send("status");            // refresh live price on the buy button
+      } else if (opts.dismissible) {
+        g.remove();
       } else {
         show("ug-kid");
       }
@@ -2074,12 +2456,31 @@ function advance() { nextActivity(); }
       const m = document.getElementById("ug-msg");
       m.textContent = t; m.classList.remove("hidden");
     };
+    // Offered whenever the store can't complete a purchase. Grants a grace
+    // period instead of a dead end, and the gate comes back later.
+    const later = document.getElementById("ug-later");
+    later.addEventListener("click", () => {
+      // Mid-trial (parent dashboard) this is just a close button — don't touch
+      // the trial clock, which would cut a fresh trial down to the grace window.
+      if (!opts.dismissible) {
+        kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      }
+      const gate = document.getElementById("unlock-gate");
+      if (gate) gate.remove();
+    });
+    const offerLater = () => later.classList.remove("hidden");
+    if (opts.dismissible) offerLater();   // parents need a way back out
     document.getElementById("bf-buy-btn").addEventListener("click", () => {
       msg("Opening App Store…");
       pendingBuy = (r) => {
         if (r.ok) { markOwned(); if (window.SFX) SFX.play("fanfare"); }
         else if (r.error === "cancelled") msg("No problem — nothing was charged.");
-        else msg("Purchase didn't go through. Try again in a moment.");
+        else if (r.error === "pending") msg("Waiting on a grown-up to approve this purchase.");
+        else {
+          msg("The App Store isn't reachable right now, so nothing was charged. "
+              + "Keep learning and try again later.");
+          offerLater();
+        }
       };
       send("buy");
     });
@@ -2091,17 +2492,91 @@ function advance() { nextActivity(); }
       };
       send("restore");
     });
+
+    // Gift codes. These are MATT'S OWN codes, not Apple promo codes — Apple's are
+    // unreadable 18-character strings you cannot choose and can only redeem in the App
+    // Store app, which is no use for handing a teacher or a parent a free copy. These are
+    // short words he can say out loud or write on a slip of paper, and they work offline.
+    // Behind the parental gate like every other unlock, so a kid cannot guess their way in.
+    // One tap from the very first card. A teacher or parent holding a code should never
+    // have to get past the kid screen and the grown-ups maths question first — that gate
+    // exists for the PURCHASE, which is what Apple's kids rules are about, not for typing
+    // a word Matt handed them. (Matt, 2026-09-12: "not turn into multiple screens and
+    // confusing steps.")
+    let codeCameFrom = "ug-kid";
+    const openCode = (from) => {
+      codeCameFrom = from;
+      document.getElementById("ug-code-msg").classList.add("hidden");
+      show("ug-code-card");
+      document.getElementById("ug-code").focus();
+    };
+    document.getElementById("ug-code-open").addEventListener("click", () => openCode("ug-kid"));
+    document.getElementById("ug-code-open2").addEventListener("click", () => openCode("ug-buy"));
+    document.getElementById("ug-code-back").addEventListener("click", () => {
+      if (codeCameFrom === "ug-kid" && opts.dismissible) { g.remove(); return; }
+      show(codeCameFrom);
+    });
+    const codeMsg = (t) => {
+      const m = document.getElementById("ug-code-msg");
+      m.textContent = t; m.classList.remove("hidden");
+    };
+    const submitCode = async () => {
+      const cleaned = (document.getElementById("ug-code").value || "")
+        .toUpperCase().replace(/[\s-]/g, "");
+      if (!cleaned) return;
+      let h;
+      try { h = await sha256hex(cleaned); }
+      catch (e) { codeMsg("Couldn't check that code on this device."); return; }
+      if (CODE_HASHES.indexOf(h) >= 0) {
+        markOwned();
+        if (window.SFX) SFX.play("fanfare");
+      } else {
+        codeMsg("That code didn't match. Check it and try again.");
+        document.getElementById("ug-code").select();
+      }
+    };
+    document.getElementById("ug-code-go").addEventListener("click", submitCode);
+    document.getElementById("ug-code").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submitCode(); }
+    });
   }
 
-  function checkGate() {
+  // SHA-256, and the words themselves are deliberately NOT in this repo — a hash is
+  // one-way, a comment naming the code is not. To mint one:
+  //   echo -n YOURCODE | shasum -a 256
+  const CODE_HASHES = [
+    "7cefe36d0c3bb99907ce04512dbd3bd33284c5544c7113a8d9af08385ec076b6", // gift code 1
+    "6983cfebdb01ef2dfb163cc27e7ada78ecbf27a901477b93d377fedb7c968433", // gift code 2
+    "c8c8f7fe625a1a98824e4fc4887ca38b8caeb22ad91c4f40d500c3378549597e", // owner
+  ];
+  async function sha256hex(str) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function checkGate() {
     const expired = window.__BF_TRIAL_EXPIRED || daysUsed() >= TRIAL_DAYS;
     if (isOwned() || !expired) return;
+    // Never lock a kid out over something we can't sell them. If StoreKit has
+    // no product to offer — offline, an App Store outage, a product that isn't
+    // live yet — extend the trial quietly and ask again in a week.
+    if (!(await whenStoreKnown())) {
+      kvSet("first_launch_ts", String(Date.now() - (TRIAL_DAYS - GRACE_DAYS) * 86400e3));
+      return;
+    }
     buildGate();
   }
 
   window.addEventListener("load", () => {
     daysUsed();          // stamp first launch no matter what
     send("status");      // learn price + true ownership from StoreKit
+    // "Unlock forever" from the parent dashboard — reachable any time, not
+    // just after the trial (App Review needs to find the purchase on day one).
+    if (location.hash === "#unlock" && !isOwned()) {
+      history.replaceState(null, "", location.pathname + location.search);
+      buildGate({ start: "gate", dismissible: true });
+      return;
+    }
     if (!window.__BF_UITOUR || window.__BF_TRIAL_EXPIRED) checkGate();
   });
 })();

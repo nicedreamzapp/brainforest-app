@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace 'com.brainforest.app'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.brainforest.app"
         minSdk 26
-        targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        targetSdk 36
+        versionCode 9
+        versionName "1.7"
     }
 
     // Voice pack is already-compressed AAC (.m4a); storing (not deflating) keeps
@@ -21,15 +21,28 @@ android {
         noCompress += ['m4a', 'json']
     }
 
+    signingConfigs {
+        release {
+            def props = new Properties()
+            def f = rootProject.file('keystore.properties')
+            if (f.exists()) {
+                f.withInputStream { props.load(it) }
+                storeFile file(props.getProperty('storeFile'))
+                storePassword props.getProperty('storePassword')
+                keyAlias props.getProperty('keyAlias')
+                keyPassword props.getProperty('keyPassword')
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // keep default debuggable
         }
         release {
-            // Play requires >=25% DEX coverage from Feb 2027; false is 0%.
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 
@@ -46,4 +59,5 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'com.android.billingclient:billing-ktx:8.0.0'
 }
