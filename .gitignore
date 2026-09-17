@@ -24,3 +24,7 @@ android/keystore.properties
 
 # Raw 24k wavs kept for cheap pitch re-renders (not shipped)
 ios/voice_raw/
+
+# Generated voice pack under ios/ too (the web/voice/ rule above only matches at the root)
+**/web/voice/
+__pycache__/
