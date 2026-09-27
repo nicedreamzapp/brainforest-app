@@ -44,7 +44,7 @@ Built by Matt Macosko. The main parts, each linked to its file:
 
 - **The iOS voice pack is not in the repo** (`ios/web/voice/` is gitignored). The app has no robot-voice fallback on purpose, so a fresh iOS build is silent until you generate the pack.
 - **The voice tools expect the author's machine:** they call a Python venv at `~/JaneOS/.venv`, and the content scripts read from `~/Documents/Brainforest`. They will not run as-is on a clean checkout.
-- **This repo's Android voice pack is older than the shipping app.** Running `verify_voice_coverage.py` against the pack committed here finds 1,374 of 7,175 spoken lines with no clip. The builds on Google Play and the App Store (1.7) carry the full pack and pass the same check with every line covered.
+- **This repo's Android voice pack is older than the shipping app.** Running `verify_voice_coverage.py` against the pack committed here finds 1,374 of 7,175 spoken lines with no clip. The Google Play build (1.7) and the iOS build tree carry the full pack and pass the same check with every line covered.
 - **Two copies of the web app:** `ios/web/` and `android/app/src/main/assets/web/` are identical today, but there is no sync script in the repo.
 
 ## Links
