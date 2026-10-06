@@ -112,6 +112,19 @@ async function buildTabs() {
     : "No kids yet — add one in the app first.";
 }
 
+const SKILL_NAMES = {
+  math_count: "Counting", math_add: "Adding", math_sub: "Taking Away", math_groups: "Groups Of",
+  math_skip: "Skip Counting", math_place_value: "Place Value", math_shapes: "Shapes",
+  math_mult: "Multiplying", math_div: "Dividing", math_fractions: "Fractions",
+  math_decimals: "Decimals", math_word: "Word Problems", math_geom: "Geometry",
+  money: "Money", time: "Telling Time", letters: "Letters", writing_letter: "Letter Tracing",
+  phonics_cvc: "Sounding Out", sight_words: "Sight Words", reading_fluency: "Reading Fluency",
+  reading_comp: "Reading", spell: "Spelling", vocab: "Vocabulary", grammar: "Grammar",
+  science: "Science", social: "Our World", sel: "Big Feelings",
+};
+const THEME_NAMES = { unicorns: "unicorns", mermaids: "mermaids", dinos: "dinosaurs",
+  space: "space", cats: "cats", horses: "horses", bluey: "puppies" };
+
 async function load() {
   const m = await (await fetch("/api/mastery")).json();
   const col = await (await fetch("/api/collection")).json();
@@ -120,7 +133,13 @@ async function load() {
   if (col.error) { col.quests_done = 0; }
   const totalAttempts = mastery.reduce((a, b) => a + b.attempts, 0);
   const totalCorrect = mastery.reduce((a, b) => a + b.correct, 0);
-  const mastered = mastery.filter(x => x.score >= 0.85).length;
+  // Mastered means a real track record, not one lucky answer: 8+ tries and a
+  // strong recent score. (1/1 used to show as "mastered, 100%".)
+  const isMastered = x => x.score >= 0.85 && x.attempts >= 8;
+  const mastered = mastery.filter(isMastered).length;
+  let labels = {};
+  try { (await (await fetch("/api/path")).json()).nodes.forEach(n => { labels[n.key] = n.label; }); } catch (_) {}
+  const nice = k => labels[k] || SKILL_NAMES[k] || pretty(k);
   document.getElementById("kpis").innerHTML = `
     <div class="stat"><div class="num">${totalAttempts}</div><div class="lbl">Attempts</div></div>
     <div class="stat"><div class="num">${totalCorrect}</div><div class="lbl">Correct</div></div>
@@ -132,17 +151,19 @@ async function load() {
   const list = document.getElementById("mastery-list");
   if (mastery.length) {
     list.innerHTML = "";
-    mastery.sort((a, b) => b.score - a.score).forEach(r => {
-      const pct = Math.round(r.score * 100);
+    const acc = r => r.attempts ? r.correct / r.attempts : 0;
+    mastery.sort((a, b) => acc(b) - acc(a) || b.attempts - a.attempts).forEach(r => {
+      // The bar and the % now match the "x/y correct" line under them.
+      const pct = Math.round(acc(r) * 100);
       const last = r.last_seen ? new Date(r.last_seen).toLocaleDateString() : "—";
       list.insertAdjacentHTML("beforeend", `
         <div class="skill-row">
           <div class="skill-top">
-            <span class="skill-name">${pretty(r.skill)}</span>
+            <span class="skill-name">${nice(r.skill)}</span>
             <div class="bar"><div style="width:${pct}%"></div></div>
             <span class="pct">${pct}%</span>
           </div>
-          <div class="skill-sub">${r.correct}/${r.attempts} correct · last practiced ${last}</div>
+          <div class="skill-sub">${r.correct}/${r.attempts} correct${isMastered(r) ? " · mastered" : (r.attempts < 8 ? " · just getting started" : "")} · last practiced ${last}</div>
         </div>`);
     });
   }
@@ -155,7 +176,7 @@ async function load() {
       sl.insertAdjacentHTML("beforeend", `
         <div class="session-row">
           <span class="session-when">${when}</span>
-          <span class="session-meta">${s.theme || "—"} · ${s.activities_done} activities · ${s.minutes} min</span>
+          <span class="session-meta">${THEME_NAMES[s.theme] || s.theme || "—"} · ${s.activities_done} ${s.activities_done === 1 ? "activity" : "activities"} · ${s.minutes} min</span>
         </div>`);
     });
   }

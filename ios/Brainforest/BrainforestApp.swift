@@ -347,7 +347,17 @@ final class BridgeHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
         switch message.name {
         case "bfStore":
-            if let json = message.body as? String { BrainStore.save(json) }
+            if let json = message.body as? String {
+                BrainStore.save(json)
+                // The store user-script was captured at launch and re-runs on every
+                // page load (home <-> parent dashboard); refresh it so a page load
+                // sees the latest progress instead of rolling back to launch time.
+                let keep = ucc.userScripts.filter { !$0.source.hasPrefix("window.__BF_STORE = ") }
+                ucc.removeAllUserScripts()
+                keep.forEach { ucc.addUserScript($0) }
+                ucc.addUserScript(WKUserScript(source: "window.__BF_STORE = \(json);",
+                                               injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            }
         case "bfIAP":
             if let dict = message.body as? [String: Any], let cmd = dict["cmd"] as? String {
                 Purchases.shared.handle(cmd: cmd)

@@ -7760,12 +7760,12 @@
     "title": "13",
     "prompt": "Tens and ones!",
     "items": [
-     "1 tens 3 ones",
-     "3 tens 1 ones",
+     "1 ten 3 ones",
+     "3 tens 1 one",
      "13 tens",
-     "13 ones"
+     "1 ten 4 ones"
     ],
-    "answer": "1 tens 3 ones"
+    "answer": "1 ten 3 ones"
    },
    "expects": "tap",
    "skill": "math_place_value",
@@ -7783,12 +7783,12 @@
     "title": "21",
     "prompt": "Tens and ones!",
     "items": [
-     "2 tens 1 ones",
-     "1 tens 2 ones",
+     "2 tens 1 one",
+     "1 ten 2 ones",
      "21 tens",
-     "21 ones"
+     "2 tens 2 ones"
     ],
-    "answer": "2 tens 1 ones"
+    "answer": "2 tens 1 one"
    },
    "expects": "tap",
    "skill": "math_place_value",
@@ -7809,7 +7809,7 @@
      "2 tens 9 ones",
      "9 tens 2 ones",
      "29 tens",
-     "29 ones"
+     "2 tens 8 ones"
     ],
     "answer": "2 tens 9 ones"
    },
@@ -7832,7 +7832,7 @@
      "3 tens 7 ones",
      "7 tens 3 ones",
      "37 tens",
-     "37 ones"
+     "3 tens 8 ones"
     ],
     "answer": "3 tens 7 ones"
    },
@@ -7855,7 +7855,7 @@
      "4 tens 5 ones",
      "5 tens 4 ones",
      "45 tens",
-     "45 ones"
+     "4 tens 6 ones"
     ],
     "answer": "4 tens 5 ones"
    },
@@ -7878,7 +7878,7 @@
      "5 tens 3 ones",
      "3 tens 5 ones",
      "53 tens",
-     "53 ones"
+     "5 tens 4 ones"
     ],
     "answer": "5 tens 3 ones"
    },
@@ -7898,12 +7898,12 @@
     "title": "61",
     "prompt": "Tens and ones!",
     "items": [
-     "6 tens 1 ones",
-     "1 tens 6 ones",
+     "6 tens 1 one",
+     "1 ten 6 ones",
      "61 tens",
-     "61 ones"
+     "6 tens 2 ones"
     ],
-    "answer": "6 tens 1 ones"
+    "answer": "6 tens 1 one"
    },
    "expects": "tap",
    "skill": "math_place_value",
@@ -7924,7 +7924,7 @@
      "6 tens 9 ones",
      "9 tens 6 ones",
      "69 tens",
-     "69 ones"
+     "6 tens 8 ones"
     ],
     "answer": "6 tens 9 ones"
    },
@@ -7945,9 +7945,9 @@
     "prompt": "Tens and ones!",
     "items": [
      "7 tens 7 ones",
+     "8 tens 7 ones",
      "77 tens",
-     "77 ones",
-     "8 tens 7 ones"
+     "7 tens 8 ones"
     ],
     "answer": "7 tens 7 ones"
    },
@@ -7970,7 +7970,7 @@
      "8 tens 5 ones",
      "5 tens 8 ones",
      "85 tens",
-     "85 ones"
+     "8 tens 6 ones"
     ],
     "answer": "8 tens 5 ones"
    },
@@ -7993,7 +7993,7 @@
      "9 tens 3 ones",
      "3 tens 9 ones",
      "93 tens",
-     "93 ones"
+     "9 tens 4 ones"
     ],
     "answer": "9 tens 3 ones"
    },
@@ -8514,7 +8514,7 @@
    "say": "Tap the correct spelling of apple.",
    "screen": {
     "type": "word",
-    "title": "Spell apple",
+    "title": "Spelling Time!",
     "prompt": "Which spelling is correct?",
     "items": [
      "apple",
@@ -8535,34 +8535,10 @@
   "skill": "spell",
   "difficulty": 2,
   "t": {
-   "say": "Tap the correct spelling of friend.",
-   "screen": {
-    "type": "word",
-    "title": "Spell friend",
-    "prompt": "Pick the right spelling.",
-    "items": [
-     "frend",
-     "friend",
-     "freind",
-     "frind"
-    ],
-    "answer": "friend"
-   },
-   "expects": "tap",
-   "skill": "spell",
-   "difficulty": 2,
-   "next_hint": ""
-  },
-  "_judged": true
- },
- {
-  "skill": "spell",
-  "difficulty": 2,
-  "t": {
    "say": "Tap the correct spelling of school.",
    "screen": {
     "type": "word",
-    "title": "Spell school",
+    "title": "Spelling Time!",
     "prompt": "Which one is correct?",
     "items": [
      "scool",
@@ -8586,7 +8562,7 @@
    "say": "Tap the correct spelling of because.",
    "screen": {
     "type": "word",
-    "title": "Spell because",
+    "title": "Spelling Time!",
     "prompt": "Find the correct spelling.",
     "items": [
      "becuz",
@@ -8610,7 +8586,7 @@
    "say": "Tap the correct spelling of people.",
    "screen": {
     "type": "word",
-    "title": "Spell people",
+    "title": "Spelling Time!",
     "prompt": "Tap the correct word.",
     "items": [
      "people",
@@ -8634,7 +8610,7 @@
    "say": "Tap the correct spelling of house.",
    "screen": {
     "type": "word",
-    "title": "Spell house",
+    "title": "Spelling Time!",
     "prompt": "Choose the right spelling.",
     "items": [
      "houz",
@@ -8658,7 +8634,7 @@
    "say": "Tap the correct spelling of water.",
    "screen": {
     "type": "word",
-    "title": "Spell water",
+    "title": "Spelling Time!",
     "prompt": "Which is spelled right?",
     "items": [
      "watter",
@@ -8682,11 +8658,11 @@
    "say": "Tap the correct spelling of write.",
    "screen": {
     "type": "word",
-    "title": "Spell write",
+    "title": "Spelling Time!",
     "prompt": "Select the correct spelling.",
     "items": [
-     "rite",
-     "writ",
+     "wrte",
+     "writte",
      "write",
      "wriet"
     ],
@@ -8706,7 +8682,7 @@
    "say": "Tap the correct spelling of there.",
    "screen": {
     "type": "word",
-    "title": "Spell there",
+    "title": "Spelling Time!",
     "prompt": "Which spelling is right?",
     "items": [
      "ther",
@@ -8730,7 +8706,7 @@
    "say": "Tap the correct spelling of thought.",
    "screen": {
     "type": "word",
-    "title": "Spell thought",
+    "title": "Spelling Time!",
     "prompt": "Pick the correct word.",
     "items": [
      "thought",
@@ -8754,7 +8730,7 @@
    "say": "Tap the correct spelling of ready.",
    "screen": {
     "type": "word",
-    "title": "Spell ready",
+    "title": "Spelling Time!",
     "prompt": "Find the right spelling.",
     "items": [
      "redy",
@@ -8778,7 +8754,7 @@
    "say": "Tap the correct spelling of morning.",
    "screen": {
     "type": "word",
-    "title": "Spell morning",
+    "title": "Spelling Time!",
     "prompt": "Choose the right word.",
     "items": [
      "moning",
@@ -8830,9 +8806,9 @@
     "prompt": "What did Sam do at the park?",
     "items": [
      "He played on swings and slides",
-     "He read a book",
-     "He slept",
-     "He ate lunch"
+     "He read a book under a big tree",
+     "He slept on a blanket in the sun",
+     "He ate lunch at a picnic table"
     ],
     "answer": "He played on swings and slides"
    },
@@ -8878,9 +8854,9 @@
     "prompt": "What did Jack use to make his sandwich?",
     "items": [
      "Bread and peanut butter",
-     "Bread and cheese",
-     "Bread and jam",
-     "Bread and honey"
+     "Bread and cheese and ham",
+     "Bread and strawberry jam",
+     "Bread and honey and butter"
     ],
     "answer": "Bread and peanut butter"
    },
@@ -8926,9 +8902,9 @@
     "prompt": "What did Emma blow out at her party?",
     "items": [
      "Candles on a cake",
-     "Balloons",
-     "Whistles",
-     "Party horns"
+     "Balloons at a party",
+     "Whistles and horns",
+     "Bubbles in the yard"
     ],
     "answer": "Candles on a cake"
    },
@@ -8950,9 +8926,9 @@
     "prompt": "What did Tommy do with his tooth?",
     "items": [
      "Put it under his pillow",
-     "Threw it away",
-     "Gave it to his mom",
-     "Put it in a box"
+     "Threw it in the trash can",
+     "Gave it to his mom to keep",
+     "Put it in a little box"
     ],
     "answer": "Put it under his pillow"
    },
@@ -8974,9 +8950,9 @@
     "prompt": "What ingredient did they add to the cookies?",
     "items": [
      "Chocolate chips",
-     "Peanuts",
-     "Raisins",
-     "Coconut"
+     "Crunchy peanuts",
+     "Raisins and nuts",
+     "Shredded coconut"
     ],
     "answer": "Chocolate chips"
    },
@@ -9022,9 +8998,9 @@
     "prompt": "What grew from the seeds?",
     "items": [
      "Plants and flowers",
-     "Trees",
-     "Vegetables",
-     "Only grass"
+     "Tall trees and vines",
+     "Only green grass",
+     "Rocks and pebbles"
     ],
     "answer": "Plants and flowers"
    },
@@ -9162,7 +9138,7 @@
    "say": "Here's a birthday party story.",
    "screen": {
     "type": "reading_comp",
-    "title": "The Birthday Cake",
+    "title": "Mia had a birthday party. Her mom made a big chocolate cake. Everyone said it was yummy!",
     "prompt": "What flavor was the cake?",
     "items": [
      "chocolate",
@@ -9186,7 +9162,7 @@
    "say": "Let's read about the park.",
    "screen": {
     "type": "reading_comp",
-    "title": "Playing at the Park",
+    "title": "The children ran to the park. They climbed the ladder and went down the slide. Then they did it again!",
     "prompt": "What did the children slide down?",
     "items": [
      "the swings",
@@ -9210,7 +9186,7 @@
    "say": "Here's a story about helping.",
    "screen": {
     "type": "reading_comp",
-    "title": "Helping in the Garden",
+    "title": "Max helped his grandma in the garden. He dug little holes and planted pretty flowers. Then he gave them water.",
     "prompt": "What did Max plant?",
     "items": [
      "flowers",
@@ -9234,7 +9210,7 @@
    "say": "Let's read about a pet dog.",
    "screen": {
     "type": "reading_comp",
-    "title": "Buddy the Puppy",
+    "title": "Buddy is a happy puppy. He likes to chase his red ball across the yard. Then he brings it back and wags his tail.",
     "prompt": "What toy did Buddy play with?",
     "items": [
      "a rope",
@@ -9258,7 +9234,7 @@
    "say": "Here's a story about friends.",
    "screen": {
     "type": "reading_comp",
-    "title": "Best Friends Go to School",
+    "title": "Lisa and Mia are best friends. Every morning they walk to school together. They sing songs on the way.",
     "prompt": "Where did Lisa and Mia go?",
     "items": [
      "to the park",
@@ -9303,15 +9279,15 @@
   "skill": "science",
   "difficulty": 2,
   "t": {
-   "say": "Penguins live where it is very cold and icy.",
+   "say": "Many penguins live where it is very cold and icy.",
    "screen": {
     "type": "story",
     "title": "Where Do Penguins Live",
-    "prompt": "What kind of place is a penguin's home?",
+    "prompt": "Many penguins live in what kind of place?",
     "items": [
      "ice and snow",
-     "forest",
-     "desert",
+     "hot dry sand",
+     "a warm jungle",
      "rainforest"
     ],
     "answer": "ice and snow"
@@ -9327,18 +9303,18 @@
   "skill": "science",
   "difficulty": 2,
   "t": {
-   "say": "When water sits in the warm sun, something magical happens.",
+   "say": "Let's think about water sitting out in the warm sun.",
    "screen": {
     "type": "story",
     "title": "Water in the Sun",
     "prompt": "What happens to water when the sun is very hot?",
     "items": [
-     "it disappears",
+     "it evaporates",
      "it becomes ice",
      "it turns green",
      "it gets heavier"
     ],
-    "answer": "it disappears"
+    "answer": "it evaporates"
    },
    "expects": "tap",
    "skill": "science",
@@ -9358,9 +9334,9 @@
     "prompt": "What falls down when clouds get too full of water?",
     "items": [
      "rain",
-     "snow",
-     "hail",
-     "wind"
+     "wind",
+     "sand",
+     "leaves"
     ],
     "answer": "rain"
    },
@@ -9838,8 +9814,8 @@
     "prompt": "Who keeps people safe in town?",
     "items": [
      "Police officer",
-     "Baker",
-     "Bus driver",
+     "Baker at a shop",
+     "School bus driver",
      "Plumber"
     ],
     "answer": "Police officer"
@@ -9886,8 +9862,8 @@
     "prompt": "Who delivers mail to your house?",
     "items": [
      "Mail carrier",
-     "Cashier",
-     "Chef",
+     "Store cashier",
+     "Restaurant chef",
      "Janitor"
     ],
     "answer": "Mail carrier"
@@ -9910,9 +9886,9 @@
     "prompt": "What do families do on Thanksgiving?",
     "items": [
      "Give thanks together",
-     "Watch fireworks",
-     "Trick-or-treat",
-     "Decorate eggs"
+     "Watch fireworks at night",
+     "Go trick or treating",
+     "Decorate eggs together"
     ],
     "answer": "Give thanks together"
    },
@@ -9958,9 +9934,9 @@
     "prompt": "What should Tommy do?",
     "items": [
      "Pick up the pencils",
-     "Walk away",
-     "Laugh at her",
-     "Tell the teacher"
+     "Walk away from her fast",
+     "Laugh at her and point",
+     "Step on the pencils"
     ],
     "answer": "Pick up the pencils"
    },
@@ -9982,9 +9958,9 @@
     "prompt": "What should Mia do?",
     "items": [
      "Share cookies with her friend",
-     "Keep all cookies",
-     "Hide the cookies",
-     "Throw cookies away"
+     "Keep all the cookies for herself",
+     "Hide the cookies in her lunchbox",
+     "Throw the cookies in the trash"
     ],
     "answer": "Share cookies with her friend"
    },
@@ -10030,9 +10006,9 @@
     "prompt": "What do gardeners help grow?",
     "items": [
      "Vegetables and flowers",
-     "Rocks and sand",
-     "Toys and games",
-     "Paper and books"
+     "Rocks and sand piles",
+     "Plastic toys and games",
+     "Paper and story books"
     ],
     "answer": "Vegetables and flowers"
    },
@@ -10078,8 +10054,8 @@
     "prompt": "What does a firefighter do to help our community?",
     "items": [
      "Puts out fires and rescues people",
-     "Sells groceries at the store",
-     "Fixes broken roads",
+     "Sells fruit and groceries at the store",
+     "Fixes broken roads and bridges",
      "Teaches students in classrooms"
     ],
     "answer": "Puts out fires and rescues people"
@@ -10102,9 +10078,9 @@
     "prompt": "Which is a job a teacher does?",
     "items": [
      "Teaches kids to read and write",
-     "Delivers mail to homes",
-     "Works in a hospital",
-     "Drives a bus"
+     "Delivers mail to homes every day",
+     "Works as a nurse in a hospital",
+     "Drives a bus around the city"
     ],
     "answer": "Teaches kids to read and write"
    },
@@ -10126,9 +10102,9 @@
     "prompt": "What does a doctor do?",
     "items": [
      "Keeps us healthy and helps when we are sick",
-     "Grows food on a farm",
-     "Builds houses for people",
-     "Catches criminals"
+     "Grows food on a farm and feeds all the animals",
+     "Builds houses and roads for people in town",
+     "Catches fish on a boat out on the ocean"
     ],
     "answer": "Keeps us healthy and helps when we are sick"
    },
@@ -10150,9 +10126,9 @@
     "prompt": "On a map, what does a red star usually show?",
     "items": [
      "Where you are or what is important",
-     "Where the water is",
-     "Where the mountains are",
-     "Where the trees grow"
+     "Where the lakes and rivers are found",
+     "Where the tall mountains are",
+     "Where the forests and trees grow"
     ],
     "answer": "Where you are or what is important"
    },
@@ -10174,9 +10150,9 @@
     "prompt": "What would you see on a map to show the fire station?",
     "items": [
      "A small fire truck picture",
-     "A blue wavy line",
-     "A green area",
-     "A brown tent"
+     "A blue wavy line for a river",
+     "A green area for a park",
+     "A brown tent for a campsite"
     ],
     "answer": "A small fire truck picture"
    },
@@ -10198,9 +10174,9 @@
     "prompt": "What do families do together on holidays?",
     "items": [
      "Spend time with loved ones and celebrate",
-     "Clean the whole house all day",
-     "Watch TV alone in a quiet room",
-     "Go to school early"
+     "Clean the whole house all day by themselves",
+     "Watch TV alone in a quiet room all day",
+     "Go to school early and stay late"
     ],
     "answer": "Spend time with loved ones and celebrate"
    },

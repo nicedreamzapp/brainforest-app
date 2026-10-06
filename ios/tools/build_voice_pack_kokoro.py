@@ -72,8 +72,13 @@ def classify_question(say, title, prompt):
         prose = [v for v in rest if not INSTRUCTION_RE.match(v)]
         ask = (prose or rest or [None])[0]
         rest = [v for v in rest if v is not ask]
-    context = next((v for v in rest
-                    if not INSTRUCTION_RE.match(v) and not _rewords(v, ask)), None)
+    ctx_pool = [v for v in rest if not INSTRUCTION_RE.match(v)]
+    title_v = str(title or "").strip()
+    passages = sorted((v for v in ctx_pool
+                       if re.search(r"[.!]\s*$", v) and len(WORD_RE.findall(v)) >= 6),
+                      key=lambda v: (v == title_v, len(v)), reverse=True)
+    context = passages[0] if passages else next(
+        (v for v in ctx_pool if not _rewords(v, ask)), None)
     return heading, context, ask
 
 def kidify(t):   # phone build: Click -> Tap (mirrors _kidify with IS_TOUCH)
@@ -126,6 +131,49 @@ CURRICULUM_LABELS = ["Counting", "Adding", "Taking Away", "Groups Of", "Sounding
     "Fractions", "Word Problems", "Vocabulary", "Big Multiplying", "Long Division",
     "Decimals", "Geometry", "Grammar"]
 
+# Mirrors SPREAD_SKILLS / CHOICE_DEPENDENT / spreadNumberChoices() in engine.js.
+SPREAD_SKILLS = {"math_count", "math_add", "math_sub", "math_mult", "math_div",
+                 "math_groups", "math_skip", "math_geom", "math_word", "money"}
+CHOICE_DEPENDENT = re.compile(r"bigg|small|great|least|most|more|less|fewer|odd|even|which|compare|order|round|closest", re.I)
+
+def spread_values(skill, s, say):
+    items = s.get("items") or []
+    if skill not in SPREAD_SKILLS or len(items) < 3:
+        return []
+    if CHOICE_DEPENDENT.search(" ".join(str(x) for x in (s.get("title"), s.get("prompt"), s.get("heading"), say))):
+        return []
+    raw = [str(x).strip() for x in items]
+    ans_s = str(s.get("answer", "")).strip()
+    pre = suf = ""
+    m = re.match(r"^(\$?)-?\d+(¢?)$", raw[0])
+    if m and (m.group(1) or m.group(2)) and all(x.startswith(m.group(1)) and x.endswith(m.group(2)) for x in raw) \
+            and ans_s.startswith(m.group(1)) and ans_s.endswith(m.group(2)):
+        pre, suf = m.group(1), m.group(2)
+    def strip(x):
+        x = x[len(pre):] if pre else x
+        return x[:-len(suf)] if suf else x
+    strs = [strip(x) for x in raw]
+    if not all(re.fullmatch(r"-?\d+", x) for x in strs):
+        return []
+    ans = int(strip(ans_s)); v = sorted(int(x) for x in strs)
+    if ans not in v or len(set(v)) != len(v):
+        return []
+    n = len(v); step = v[1] - v[0]
+    fmt = lambda k: f"{pre}{k}{suf}"
+    if step > 0 and all(v[i] - v[i - 1] == step for i in range(1, n)):
+        return [fmt(ans + step * k) for k in range(-(n - 1), n) if ans + step * k >= 0]
+    dists = []
+    for x in v:
+        if x == ans: continue
+        d = abs(x - ans)
+        while d in dists: d += 1
+        dists.append(d)
+    out = []
+    for d in dists:
+        out.append(fmt(ans + d))
+        if ans - d >= 0: out.append(fmt(ans - d))
+    return out
+
 # 1. bank content: say lines, comeback variants, answers, option labels
 for bank_file in sorted(WEB.glob("content/bank_*.json")):
     for a in json.loads(bank_file.read_text()):
@@ -137,6 +185,10 @@ for bank_file in sorted(WEB.glob("content/bank_*.json")):
             add(tts_friendly(f"It was {s['answer']}."))
         for item in s.get("items", []):
             add(str(item))
+        # engine.js spreadNumberChoices() rewrites number choices at serve time;
+        # record every value it can produce so "Read answers" never goes silent.
+        for v in spread_values(a.get("skill"), s, t.get("say")):
+            add(v)
         # The spoken question is whatever the classifier calls context + ask —
         # the heading is decorative and never spoken, so it is never recorded.
         _, ctx, ask = classify_question(t.get("say"), s.get("title"), s.get("prompt"))
@@ -146,6 +198,8 @@ for bank_file in sorted(WEB.glob("content/bank_*.json")):
 # 2. fixed phrase pools straight out of app.js (praise, try-again, hints)
 for ph in extract_js_array("function pickPraise"): add(ph)
 for ph in extract_js_array("function pickGentleTry"): add(ph)
+for ph in extract_js_array("function pickSecondTry"): add(ph)
+for ph in extract_js_array("function pickMovingOn"): add(ph)
 try:
     for ph in extract_js_array("const TRY_AGAIN_HINTS"): add(ph)
 except ValueError:

@@ -2595,9 +2595,9 @@
     "prompt": "Which word makes sense?",
     "items": [
      "run",
-     "sit",
-     "eat",
-     "bed"
+     "bed",
+     "cup",
+     "hat"
     ],
     "answer": "run"
    },
@@ -2618,9 +2618,9 @@
     "prompt": "Which word makes sense?",
     "items": [
      "big",
-     "wet",
-     "old",
-     "red"
+     "run",
+     "cup",
+     "sing"
     ],
     "answer": "big"
    },
@@ -3042,8 +3042,8 @@
     "prompt": "Click the answer!",
     "items": [
      "mail carrier",
-     "singer",
-     "chef",
+     "hair stylist",
+     "piano teacher",
      "farmer"
     ],
     "answer": "mail carrier"
@@ -6580,213 +6580,6 @@
    },
    "expects": "tap",
    "skill": "math_add",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 1?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 1 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "10",
-     "7",
-     "8",
-     "9"
-    ],
-    "answer": "9"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 2?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 2 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "6",
-     "7",
-     "8",
-     "9"
-    ],
-    "answer": "8"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 3?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 3 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "5",
-     "6",
-     "7",
-     "8"
-    ],
-    "answer": "7"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 4?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 4 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "4",
-     "5",
-     "6",
-     "7"
-    ],
-    "answer": "6"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 5?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 5 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "3",
-     "4",
-     "5",
-     "6"
-    ],
-    "answer": "5"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 6?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 6 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "2",
-     "3",
-     "4",
-     "5"
-    ],
-    "answer": "4"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 7?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 7 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "1",
-     "2",
-     "3",
-     "4"
-    ],
-    "answer": "3"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 8?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 8 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "0",
-     "1",
-     "2",
-     "3"
-    ],
-    "answer": "2"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 3,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 3,
-  "t": {
-   "say": "What is 10 minus 9?",
-   "screen": {
-    "type": "math",
-    "title": "10 − 9 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "0",
-     "1",
-     "2",
-     "3"
-    ],
-    "answer": "1"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
    "difficulty": 3,
    "next_hint": ""
   }

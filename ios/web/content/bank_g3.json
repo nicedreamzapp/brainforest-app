@@ -6650,29 +6650,6 @@
   "skill": "math_sub",
   "difficulty": 4,
   "t": {
-   "say": "What is 56 minus 12?",
-   "screen": {
-    "type": "math",
-    "title": "56 − 12 = ?",
-    "prompt": "Click the answer!",
-    "items": [
-     "34",
-     "43",
-     "44",
-     "45"
-    ],
-    "answer": "44"
-   },
-   "expects": "tap",
-   "skill": "math_sub",
-   "difficulty": 4,
-   "next_hint": ""
-  }
- },
- {
-  "skill": "math_sub",
-  "difficulty": 4,
-  "t": {
    "say": "What is 57 minus 14?",
    "screen": {
     "type": "math",
@@ -7441,7 +7418,7 @@
      "1 thousand 8 hundreds 3 tens",
      "1 hundred 8 tens 3 ones",
      "8 thousands 1 hundred 3 tens",
-     "1830 ones"
+     "1 thousand 3 hundreds 8 tens"
     ],
     "answer": "1 thousand 8 hundreds 3 tens"
    },
@@ -7463,7 +7440,7 @@
     "items": [
      "4 hundreds 0 tens 7 ones",
      "4 hundreds 7 tens 0 ones",
-     "40 tens 7 ones",
+     "4 tens 7 ones",
      "7 hundreds 4 ones"
     ],
     "answer": "4 hundreds 0 tens 7 ones"
@@ -7485,9 +7462,9 @@
     "prompt": "Pick the place-value breakdown!",
     "items": [
      "6 thousands 0 hundreds 5 tens 2 ones",
-     "6 hundreds 5 tens 2 ones",
-     "65 thousands 2",
-     "6 thousands 52 hundreds"
+     "0 thousands 6 hundreds 5 tens 2 ones",
+     "6 thousands 5 hundreds 0 tens 2 ones",
+     "6 thousands 0 hundreds 2 tens 5 ones"
     ],
     "answer": "6 thousands 0 hundreds 5 tens 2 ones"
    },
@@ -7951,9 +7928,9 @@
     "prompt": "Why was the Nile important to ancient Egyptians?",
     "items": [
      "They built their civilization along it.",
-     "It is in South America.",
-     "It flows south.",
-     "It is a small stream."
+     "It is a tiny little stream in South America.",
+     "It flows south into a big cold ocean.",
+     "It is the shortest river in the world."
     ],
     "answer": "They built their civilization along it."
    },
@@ -8022,10 +7999,10 @@
     "title": "Spiders are not insects. They have eight legs, while insects have six. Spiders also have two body parts, not three.",
     "prompt": "How can you tell a spider from an insect?",
     "items": [
-     "Spiders are bigger.",
+     "Spiders are always much bigger.",
      "Spiders have eight legs.",
-     "Spiders fly.",
-     "Spiders have antennae."
+     "Spiders can fly with wings.",
+     "Spiders have three body parts."
     ],
     "answer": "Spiders have eight legs."
    },
@@ -8070,10 +8047,10 @@
     "title": "The water cycle has three main parts. Water evaporates from oceans and lakes, rises into the sky, and forms clouds. When the clouds get heavy, water falls back as rain or snow.",
     "prompt": "What happens after water evaporates?",
     "items": [
-     "It freezes underground.",
+     "It freezes deep underground.",
      "It rises and forms clouds.",
-     "It turns into rock.",
-     "It disappears forever."
+     "It turns into hard rock.",
+     "It disappears and never comes back."
     ],
     "answer": "It rises and forms clouds."
    },
@@ -8262,7 +8239,7 @@
     "title": "What does 'whisper' mean?",
     "prompt": "Click the answer!",
     "items": [
-     "yell loudly",
+     "yell very loudly",
      "speak softly",
      "sing along",
      "stay silent"
@@ -9055,9 +9032,9 @@
     "prompt": "Click the answer!",
     "items": [
      "photosynthesis",
-     "evaporation",
-     "digestion",
-     "magnetism"
+     "metamorphosis",
+     "crystallization",
+     "evaporation"
     ],
     "answer": "photosynthesis"
    },
@@ -9296,7 +9273,7 @@
     "items": [
      "New York City",
      "Washington, D.C.",
-     "Los Angeles",
+     "Los Angeles, California",
      "Boston"
     ],
     "answer": "Washington, D.C."
@@ -9344,7 +9321,7 @@
     "items": [
      "Abraham Lincoln",
      "George Washington",
-     "Thomas Jefferson",
+     "Theodore Roosevelt",
      "John Adams"
     ],
     "answer": "George Washington"

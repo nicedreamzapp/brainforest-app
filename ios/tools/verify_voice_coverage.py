@@ -58,7 +58,7 @@ for js_string in mod.phrases:
 
 # 2. the phrase pools, read from app.js so a hand-edit can't slip past
 app_js = (WEB / "app.js").read_text()
-for marker in ("function pickPraise", "function pickGentleTry", "const TRY_AGAIN_HINTS"):
+for marker in ("function pickPraise", "function pickGentleTry", "function pickSecondTry", "function pickMovingOn", "const TRY_AGAIN_HINTS"):
     if marker not in app_js:
         continue
     i = app_js.index(marker)

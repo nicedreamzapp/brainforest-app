@@ -750,6 +750,9 @@ function rewords(a, b) {
 //   heading — decorative, drawn big, NEVER spoken (math notation, emoji, topics)
 //   context — the setup or passage, may be absent
 //   ask     — the one sentence that asks something; every activity has one
+const WORD_SKILLS = new Set(["phonics_cvc", "sight_words", "letters", "spell"]);
+const NO_READ_ALOUD = new Set(["sight_words", "letters", "spell", "writing_letter"]);
+
 function classifyQuestion(payload) {
   const s = payload?.screen || {};
   let heading = null;
@@ -770,7 +773,17 @@ function classifyQuestion(payload) {
     ask = prose[0] || rest[0] || null;
     rest = rest.filter(v => v !== ask);
   }
-  const context = rest.find(v => !INSTRUCTION_RE.test(v) && !rewords(v, ask)) || null;
+  // A real passage (a story or a word-problem setup) always wins the context
+  // slot: "Let me read you a story." used to take it and the story itself was
+  // never shown or read, and passages that shared the question's words were
+  // thrown away as rewordings.
+  const ctxPool = rest.filter(v => !INSTRUCTION_RE.test(v));
+  // The on-screen title is the story itself when it is a sentence; prefer it
+  // over a spoken intro like "Here is a story about sharing."
+  const titleV = String(s.title || "").trim();
+  const passage = ctxPool.filter(v => /[.!]\s*$/.test(v) && realWords(v).length >= 6)
+    .sort((a, b) => ((b === titleV) - (a === titleV)) || (b.length - a.length))[0];
+  const context = passage || ctxPool.find(v => !rewords(v, ask)) || null;
   return { heading, context, ask };
 }
 
@@ -1472,10 +1485,21 @@ function renderActivity(p) {
     h.textContent = String(q.heading).replace(/\{EMOJI\}/gi, themeEmoji());
     c.appendChild(h);
   }
+  if (p.stretch === "up") {
+    // She's at the top of this subject, so this one comes from the next grade.
+    const ch = document.createElement("div");
+    ch.className = "challenge-chip";
+    ch.textContent = "⭐ Challenge question!";
+    ch.style.cssText = "align-self:center;margin:4px auto 2px;padding:4px 12px;border-radius:999px;" +
+      "background:linear-gradient(90deg,#ffd54f,#ffb300);color:#4a2c00;font-weight:700;font-size:14px;width:max-content;";
+    c.appendChild(ch);
+  }
   {
     // Auto-visual layer: emoji groups that illustrate the question (math: actual
     // countable objects; sight words: themed icon).
-    const visual = buildQuestionVisual(s);
+    // Word skills get no picture: on phonics the picture WAS the answer (a cat
+    // on "C..."), and sight-word icons were noise (HE drew a heart).
+    const visual = WORD_SKILLS.has(p.skill) ? null : buildQuestionVisual(s);
     if (visual) c.appendChild(visual);
   }
   if (s.scene) {
@@ -1494,6 +1518,17 @@ function renderActivity(p) {
   }
 
   if (Array.isArray(s.items) && s.items.length) {
+    // The question banks list the right answer in the same slot most of the
+    // time (bottom-left in grades 1-4, top-left in K), and kids learn to tap
+    // the slot instead of reading. Shuffle once per screen; the flag keeps the
+    // order stable on re-render so "Read answers" matches what's on screen.
+    if (!s.__shuffled) {
+      for (let i = s.items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [s.items[i], s.items[j]] = [s.items[j], s.items[i]];
+      }
+      s.__shuffled = true;
+    }
     const opts = document.createElement("div");
     // Even layout: short answers get a uniform grid, long answers stack.
     const longText = s.items.some(it =>
@@ -1526,7 +1561,9 @@ function renderActivity(p) {
     // in order. Two easy words on it — these are kids reading it.
     // The question comes FIRST on purpose. Reading four bare answers to a child
     // who never heard the question is what made this button feel like noise.
-    if (STATE.voiceOn && s.items.length && p.expects === "tap") {
+    // Not on word-recognition skills: reading "frend, friend, freind" aloud, or
+    // the sight word itself, hands over the answer.
+    if (STATE.voiceOn && s.items.length && p.expects === "tap" && !NO_READ_ALOUD.has(p.skill)) {
       const hear = document.createElement("button");
       hear.className = "hear-btn";
       hear.setAttribute("aria-label", "Read the answer choices to me");
@@ -1666,6 +1703,8 @@ function postAttempt(got, correct) {
       expected: STATE.current?.screen?.answer || "",
       got,
       correct,
+      // Mastery moves once per question: right on the first try or not.
+      mastery_correct: correct && !STATE.retried,
       latency_ms: attemptLatency(),
       theme: STATE.theme,
     }),
@@ -1707,7 +1746,7 @@ async function onTap(value, btn) {
     STATE.retried = true;
     STATE.wrongStreak++; STATE.rightStreak = 0;   // frustration signal stays honest
     if (window.SFX) SFX.play("wrong");
-    postAttempt(value, false);                     // record the miss
+    // The miss is recorded once, by finalize(), as "not first try".
     btn.classList.add("wrong");
     btn.style.pointerEvents = "none";
     btn.style.opacity = "0.4";
@@ -1780,7 +1819,9 @@ async function finalize(got, correct, feedback) {
   });
 
   // VISIBLE feedback — flash a card overlay and update bubble FIRST, then play audio
-  const phrase = correct ? pickPraise(feedback) : pickGentleTry(feedback);
+  // A second-try win is still a win, but not "perfect"; a final miss has already
+  // moved on, so it must not say "try again".
+  const phrase = correct ? (STATE.retried ? pickSecondTry() : pickPraise(feedback)) : pickMovingOn();
   setBubbleFeedback(phrase);
   flashFeedbackCard(correct, correct ? "✓" : "Next one!");
 
@@ -1795,6 +1836,11 @@ async function finalize(got, correct, feedback) {
       STATE.comeback = STATE.comeback || [];
       STATE.comeback.push({
         payload: {...STATE.current, _comeback: true,
+                  // Fresh shuffle on the re-ask — the old order was just revealed.
+                  screen: {...STATE.current.screen,
+                           items: Array.isArray(STATE.current.screen?.items)
+                             ? [...STATE.current.screen.items] : STATE.current.screen?.items,
+                           __shuffled: false},
                   say: "Remember this one? " + (STATE.current.say || "")},
         due: STATE.activitiesDone + 3,
       });
@@ -1923,7 +1969,6 @@ function pickPraise(extra) {
     "💯 Perfectly done!",
     "✔️ Spot on!",
     "✔️ Just right!",
-    "✔️ Dead right!",
     "✔️ Bang on!",
     "✔️ Precisely!",
     "✔️ You matched it!",
@@ -1981,10 +2026,8 @@ function pickPraise(extra) {
     "🚂 Full steam ahead!",
     "✏️ Sharp pencil!",
     "☁️ Cloud nine!",
-    "🍀 Lucky pick!",
     "🏂 You're flying!",
     "🥋 Master move!",
-    "🎈 Levelled up!",
     "🎵 In tune!",
     "🌟 You're a star!",
     "🌻 You brightened my day!",
@@ -2036,6 +2079,34 @@ function pickPraise(extra) {
   ];
   return (extra ? extra + " " : "") + p[Math.floor(Math.random()*p.length)];
 }
+function pickSecondTry() {
+  const p = [
+    "👍 You got it!",
+    "👍 There it is!",
+    "👍 You found it!",
+    "👍 Second time's the charm!",
+    "👍 Nice fix!",
+    "👍 Good thinking!",
+    "👍 That's the one!",
+    "👍 You worked it out!",
+  ];
+  return p[Math.floor(Math.random() * p.length)];
+}
+
+function pickMovingOn() {
+  const p = [
+    "🌱 Next one!",
+    "🌱 On to the next one!",
+    "🌱 We'll see that one again soon.",
+    "🌱 Now you know that one!",
+    "🌱 Good effort. Next!",
+    "🌱 That one was tricky. Next!",
+    "🌱 Let's keep going!",
+    "🌱 Here comes another one!",
+  ];
+  return p[Math.floor(Math.random() * p.length)];
+}
+
 function pickGentleTry(extra) {
   const p = [
     "🔁 Not quite — try again!",
@@ -2265,7 +2336,9 @@ function resetDrift() {
 async function goHome() {
   resetDrift();
   stopFactTicker();
-  speechSynthesis.cancel();
+  // Android's WebView has no speechSynthesis — an unguarded call threw here
+  // and the break button did nothing on Android.
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
   // Also stop the Piper WAV pipeline — otherwise the tutor keeps talking
   // on the home screen after "break".
   _tts_queue = [];
@@ -2292,6 +2365,19 @@ async function goHome() {
 
 function advance() { nextActivity(); }
 
+// Close out the session when the app is backgrounded or the page changes, not
+// only on "break" — the dashboard showed "0 activities · 0 min" for real play.
+function endSessionQuietly() {
+  if (!STATE.sessionId) return;
+  const seconds = Math.round((Date.now() - STATE.startedAt) / 1000);
+  fetch("/api/session/end", {
+    method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({session_id: STATE.sessionId, seconds, activities: STATE.activitiesDone}),
+  }).catch(() => {});
+}
+window.addEventListener("pagehide", endSessionQuietly);
+document.addEventListener("visibilitychange", () => { if (document.hidden) endSessionQuietly(); });
+
 // ============================================================
 // Brainforest Forever — 60-day free trial, then a one-time $1.99
 // unlock (StoreKit via the bfIAP bridge). Kids-category compliant:
@@ -2301,6 +2387,8 @@ function advance() { nextActivity(); }
   const TRIAL_DAYS = 60;
   const GRACE_DAYS = 7;    // breathing room when the store can't be reached
   const iapNative = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bfIAP;
+  // Shown to Android players too, so the store gets named per platform.
+  const STORE_NAME = /Android/i.test(navigator.userAgent) ? "Google Play" : "the App Store";
   const send = (cmd) => { try { iapNative && iapNative.postMessage({ cmd }); } catch (_) {} };
 
   let PRICE = "$1.99";
@@ -2471,13 +2559,13 @@ function advance() { nextActivity(); }
     const offerLater = () => later.classList.remove("hidden");
     if (opts.dismissible) offerLater();   // parents need a way back out
     document.getElementById("bf-buy-btn").addEventListener("click", () => {
-      msg("Opening App Store…");
+      msg("Opening " + STORE_NAME.replace(/^the /, "") + "…");
       pendingBuy = (r) => {
         if (r.ok) { markOwned(); if (window.SFX) SFX.play("fanfare"); }
         else if (r.error === "cancelled") msg("No problem — nothing was charged.");
         else if (r.error === "pending") msg("Waiting on a grown-up to approve this purchase.");
         else {
-          msg("The App Store isn't reachable right now, so nothing was charged. "
+          msg(STORE_NAME.charAt(0).toUpperCase() + STORE_NAME.slice(1) + " isn't reachable right now, so nothing was charged. "
               + "Keep learning and try again later.");
           offerLater();
         }
@@ -2488,7 +2576,7 @@ function advance() { nextActivity(); }
       msg("Checking previous purchases…");
       pendingRestore = (r) => {
         if (r.owned) markOwned();
-        else msg("No previous purchase found on this Apple account.");
+        else msg("No previous purchase found on this account.");
       };
       send("restore");
     });

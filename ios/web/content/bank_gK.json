@@ -2981,7 +2981,7 @@
     "items": [
      "star",
      "circle",
-     "moon",
+     "oval",
      "cloud"
     ],
     "answer": "star"
@@ -3357,30 +3357,6 @@
   "skill": "science",
   "difficulty": 1,
   "t": {
-   "say": "Which animal says meow?",
-   "screen": {
-    "type": "story",
-    "title": "Which animal says meow?",
-    "prompt": "Tap the animal that says meow.",
-    "items": [
-     "Dog",
-     "Cat",
-     "Duck",
-     "Pig"
-    ],
-    "answer": "Cat"
-   },
-   "expects": "tap",
-   "skill": "science",
-   "difficulty": 1,
-   "next_hint": ""
-  },
-  "_judged": true
- },
- {
-  "skill": "science",
-  "difficulty": 1,
-  "t": {
    "say": "What sound does a duck make?",
    "screen": {
     "type": "story",
@@ -3483,10 +3459,10 @@
     "title": "Helping a Friend Feel Better",
     "prompt": "What is the kind thing to do?",
     "items": [
-     "Laugh at your friend",
+     "Laugh and point at your friend",
      "Help pick up the snack",
-     "Walk away quickly",
-     "Take the snack"
+     "Walk away and keep on playing",
+     "Eat the snack yourself"
     ],
     "answer": "Help pick up the snack"
    },
@@ -3508,9 +3484,9 @@
     "prompt": "What is a kind thing to do?",
     "items": [
      "Sit next to them and ask what is wrong",
-     "Tell them to stop being sad",
-     "Run away from them",
-     "Take their toy"
+     "Tell them to stop being sad and go away",
+     "Run far away and play with someone else",
+     "Take their toy and keep it for yourself"
     ],
     "answer": "Sit next to them and ask what is wrong"
    },
@@ -3532,9 +3508,9 @@
     "prompt": "Pick the kind action.",
     "items": [
      "Hold the door for someone",
-     "Push someone down",
-     "Hide someone's toy",
-     "Say mean words"
+     "Push someone down on the grass",
+     "Hide someone's toy from them",
+     "Say mean words to a classmate"
     ],
     "answer": "Hold the door for someone"
    },
@@ -3652,9 +3628,9 @@
     "prompt": "How do you show you care?",
     "items": [
      "Help them right away",
-     "Tell them no",
-     "Ignore their call",
-     "Point and laugh"
+     "Tell them no and walk off",
+     "Ignore them and keep playing",
+     "Point at them and laugh"
     ],
     "answer": "Help them right away"
    },
@@ -3676,9 +3652,9 @@
     "prompt": "What is helpful?",
     "items": [
      "Pick it up and give it back",
-     "Step on it",
-     "Kick it away",
-     "Laugh at them"
+     "Step on it and keep walking",
+     "Kick it far away from them",
+     "Laugh at them and walk away"
     ],
     "answer": "Pick it up and give it back"
    },

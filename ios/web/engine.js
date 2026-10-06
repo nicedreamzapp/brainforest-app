@@ -88,9 +88,13 @@
     if (!m) return 0;
     const s = m.score, a = m.attempts;
     if (s < 0.45 && a >= 6) return 0;
+    // A kid who is acing a subject climbs about twice as fast.
     if (s >= 0.85 && a >= 60) return 3;
+    if (s >= 0.92 && a >= 25) return 3;
     if (s >= 0.85 && a >= 30) return 2;
+    if (s >= 0.92 && a >= 14) return 2;
     if (s >= 0.80 && a >= 12) return 1;
+    if (s >= 0.92 && a >= 6) return 1;
     return 0;
   }
 
@@ -208,10 +212,16 @@
 
   let STORE = null;
   function loadStore() {
-    let raw = window.__BF_STORE;
-    if (!raw) {
-      try { raw = JSON.parse(localStorage.getItem("brainforest_store") || "null"); } catch (_) { raw = null; }
-    }
+    // The native shell injects the store it read when the app LAUNCHED, and
+    // re-injects that same snapshot on every page load (index <-> parent
+    // dashboard). Loading it blindly rolled progress back to launch time, and
+    // the next save wrote the rollback to disk. Take whichever copy is newer.
+    const injected = window.__BF_STORE;
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem("brainforest_store") || "null"); } catch (_) { local = null; }
+    const savedAt = (x) => (x && typeof x === "object" && Number(x.savedAt)) || 0;
+    let raw = injected || local;
+    if (injected && local && savedAt(local) > savedAt(injected)) raw = local;
     // Hardened: a corrupt/partial store file must never brick the engine.
     const sane = raw && typeof raw === "object"
       && raw.kids && typeof raw.kids === "object" && !Array.isArray(raw.kids);
@@ -227,11 +237,14 @@
     }
   }
   loadStore();
+  // Leaving the page (parent dashboard and back) must not drop the last 400ms.
+  window.addEventListener("pagehide", () => persist(true));
 
   let _saveTimer = null;
   function persist(immediate) {
     clearTimeout(_saveTimer);
     const doSave = () => {
+      STORE.savedAt = Date.now();
       const json = JSON.stringify(STORE);
       try { localStorage.setItem("brainforest_store", json); } catch (_) {}
       if (nativeStore) { try { nativeStore.postMessage(json); } catch (_) {} }
@@ -260,7 +273,21 @@
       const tag = GRADE_FILE[g];
       const bank = await j(`content/bank_${tag}.json`).catch(() => null);
       const pack = await j(`content/pack_${tag}.json`).catch(() => null);
-      if (bank || pack) CONTENT.bank[g] = (bank || []).concat(pack || []);
+      if (bank || pack) {
+        // Drop exact duplicates (1st grade carried the "10 - n" set twice) and
+        // give every question a stable id so recent ones can be skipped.
+        const seen = new Set();
+        CONTENT.bank[g] = (bank || []).concat(pack || []).filter(a => {
+          // Same question with a different spoken intro or difficulty label is
+          // still the same question to a kid.
+          const sc = (a.t && a.t.screen) || {};
+          const k = [a.skill, sc.title, sc.prompt, sc.answer, (sc.items || []).join("|")].join("~");
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+        CONTENT.bank[g].forEach((a, i) => { a.id = Number(g) * 10000 + i; });
+      }
     }
     console.log("[engine] content loaded:",
       Object.keys(CONTENT.bank).map(g => `g${g}:${CONTENT.bank[g].length}`).join(" "),
@@ -339,14 +366,16 @@
       correct: correct ? 1 : 0, latency_ms: body.latency_ms || 0, theme: body.theme || null,
     });
     cap(db.attempts, 500);
-    const alpha = 0.25, target = correct ? 1.0 : 0.0;
+    // mastery_correct = right on the FIRST try; one question moves mastery once.
+    const firstTry = body.mastery_correct === undefined ? correct : !!body.mastery_correct;
+    const alpha = 0.25, target = firstTry ? 1.0 : 0.0;
     const m = db.mastery[body.skill];
     if (!m) {
-      db.mastery[body.skill] = { score: target, attempts: 1, correct: correct ? 1 : 0, last_seen: nowISO() };
+      db.mastery[body.skill] = { score: target, attempts: 1, correct: firstTry ? 1 : 0, last_seen: nowISO() };
     } else {
       m.score = m.score + alpha * (target - m.score);
       m.attempts += 1;
-      m.correct += correct ? 1 : 0;
+      m.correct += firstTry ? 1 : 0;
       m.last_seen = nowISO();
     }
     persist();
@@ -419,7 +448,8 @@
     }
     if (kid.capsStyle === "upper") {
       if ((skill.includes("mult") || title.includes("×") || title.toLowerCase().includes(" x ")) && intsInTitle.length >= 2) {
-        if (Math.max(Math.abs(intsInTitle[0]), Math.abs(intsInTitle[1])) > caps.mult_factor) return false;
+        const f = kid.grade >= 4 ? Math.min : Math.max;   // 4th grade: 94 × 6 is a starter
+        if (f(Math.abs(intsInTitle[0]), Math.abs(intsInTitle[1])) > caps.mult_factor) return false;
       }
       if ((skill.includes("div") || title.includes("÷")) && intsInTitle.length) {
         if (Math.abs(intsInTitle[0]) > caps.div_within) return false;
@@ -432,19 +462,52 @@
     return true;
   }
 
-  // ---- Bank serving (port of activity_bank.serve) ----
+  // ---- Bank serving ----
+  // Skill is the one filter that never relaxes: an island asked for Fractions
+  // must get fractions. Difficulty, caps and "not seen lately" relax in that
+  // order when a skill's pool is small.
   function bankServe(kid, opts) {
-    const { skill, theme, excludeTitles, minDifficulty, maxDifficulty, predicate } = opts;
-    let pool = bankForGrade(kid.grade);
-    const keep = (filtered) => (filtered.length ? filtered : pool);
-    if (minDifficulty != null) pool = keep(pool.filter(a => a.difficulty >= minDifficulty));
-    if (maxDifficulty != null) pool = keep(pool.filter(a => a.difficulty <= maxDifficulty));
-    if (predicate) pool = keep(pool.filter(a => predicate(a.t)));
-    if (skill) pool = keep(pool.filter(a => a.skill === skill));
-    const excl = excludeTitles || new Set();
-    pool = keep(pool.filter(a => !excl.has((a.t.screen || {}).title)));
+    const { skill, theme, band, predicate, recentIds } = opts;
+    const grade = opts.grade != null ? opts.grade : kid.grade;
+    const all = bankForGrade(grade);
+    let pool = skill ? all.filter(a => a.skill === skill) : all;
+    // A skill with only a few questions in this grade (4th-grade spelling had
+    // ONE) borrows the same skill from the grades on either side.
+    const ENOUGH = 6;
+    if (skill && pool.length < ENOUGH) {
+      for (const g of [grade - 1, grade + 1]) {
+        if (CONTENT.bank[g] && CONTENT.bank[g] !== all) pool = pool.concat(CONTENT.bank[g].filter(a => a.skill === skill));
+      }
+    }
+    if (!pool.length) pool = all;
+    // A pool of one or two means the same question over and over, so the
+    // difficulty band and number caps only apply when they leave enough to
+    // rotate; otherwise widen to the nearest difficulties.
+    if (band) {
+      const dist = a => a.difficulty < band[0] ? band[0] - a.difficulty
+                      : a.difficulty > band[1] ? a.difficulty - band[1] : 0;
+      const maxD = Math.max(0, ...pool.map(dist));
+      for (let d = 0; d <= maxD; d++) {
+        const near = pool.filter(a => dist(a) <= d);
+        if (near.length >= ENOUGH || d === maxD) { pool = near; break; }
+      }
+    }
+    if (predicate) {
+      const capped = pool.filter(a => predicate(a.t));
+      if (capped.length >= ENOUGH) pool = capped;
+    }
+    // Skip everything served recently; if that empties a small pool, skip only
+    // the most recent half, then quarter... so the oldest-seen comes back first.
+    const recent = recentIds || [];
+    for (let n = recent.length; n > 0; n = Math.floor(n / 2)) {
+      const ex = new Set(recent.slice(recent.length - n));
+      const fresh = pool.filter(a => !ex.has(a.id));
+      if (fresh.length) { pool = fresh; break; }
+    }
     const a = choice(pool);
     const out = JSON.parse(JSON.stringify(a.t));
+    out.bank_id = a.id;
+    spreadNumberChoices(out.screen || {}, out.skill, out.say);
     const th = theme || choice(THEMES);
     out.screen.theme = th;
     const title = out.screen.title || "";
@@ -452,6 +515,70 @@
     out.next_hint = "";
     return out;
   }
+
+  // The banks write number choices with a fixed shape: answer-2, answer-1,
+  // answer, answer+1 (so "tap the second biggest" was right ~95% of the time),
+  // or "common mistake" sets like answer-10, answer-9, answer-1 (answer always
+  // biggest). Re-place the answer so its rank among the choices is uniform.
+  // Only computed answers: a "which is biggest?" answer depends on the choices.
+  const SPREAD_SKILLS = new Set(["math_count", "math_add", "math_sub", "math_mult", "math_div",
+    "math_groups", "math_skip", "math_geom", "math_word", "money"]);
+  const CHOICE_DEPENDENT = /bigg|small|great|least|most|more|less|fewer|odd|even|which|compare|order|round|closest/i;
+  function spreadNumberChoices(scr, skill, say) {
+    if (!SPREAD_SKILLS.has(skill)) return;
+    if (CHOICE_DEPENDENT.test([scr.title, scr.prompt, scr.heading, say].join(" "))) return;
+    const items = scr.items;
+    if (!Array.isArray(items) || items.length < 3) return;
+    // Money choices carry a unit ("11¢", "$3"); spread the number, keep the unit.
+    let pre = "", suf = "";
+    const raw = items.map(x => String(x).trim());
+    const um = raw[0].match(/^(\$?)-?\d+(¢?)$/);
+    if (um && (um[1] || um[2]) && raw.every(x => x.startsWith(um[1]) && x.endsWith(um[2]))
+        && String(scr.answer).trim().startsWith(um[1]) && String(scr.answer).trim().endsWith(um[2])) {
+      pre = um[1]; suf = um[2];
+    }
+    const strip = x => { let t = String(x).trim(); if (pre) t = t.slice(pre.length); if (suf) t = t.slice(0, -suf.length); return t; };
+    const strs = items.map(x => (typeof x === "string" || typeof x === "number") ? strip(x) : null);
+    // Negative choices (e.g. "-9" for 22 − 21) are in the banks too; they get
+    // replaced below since a child can rule them out without doing the math.
+    if (!strs.every(x => x !== null && /^-?\d+$/.test(x))) return;
+    const ans = Number(strip(scr.answer));
+    const v = strs.map(Number).sort((a, b) => a - b);
+    const fmt = n => pre + String(n) + suf;
+    if (!v.includes(ans) || new Set(v).size !== v.length) return;
+    const n = v.length;
+    // Evenly spaced choices (11, 12, 13, 14 or 6¢, 11¢, 16¢, 21¢): slide the
+    // whole run so the answer can sit anywhere in it.
+    const step = v[1] - v[0];
+    let run = step > 0;
+    for (let i = 1; i < n; i++) if (v[i] - v[i - 1] !== step) run = false;
+    if (run) {
+      const floor = v[0] >= step ? step : (v[0] >= 1 ? 1 : 0);
+      let lo = ans - step * Math.floor(Math.random() * n);
+      while (lo < floor) lo += step;
+      scr.items = v.map((_, i) => fmt(lo + step * i));
+      return;
+    }
+    // Mistake-style set: keep each distractor's distance from the answer (the
+    // mistake it stands for) but flip sides so the answer's rank is uniform.
+    const dists = [];
+    for (const x of v) {
+      if (x === ans) continue;
+      let d = Math.abs(x - ans);
+      while (dists.includes(d)) d += 1;   // answer±1 pairs would pin the answer mid-pack
+      dists.push(d);
+    }
+    for (let tries = 0; tries < 40; tries++) {
+      const below = Math.floor(Math.random() * n);          // answer's rank
+      const order = dists.map((d, i) => i).sort(() => Math.random() - 0.5);
+      const neg = new Set(order.slice(0, below));
+      const out = dists.map((d, i) => neg.has(i) ? ans - d : ans + d);
+      if (out.some(x => x < 0) || new Set([...out, ans]).size !== n) continue;
+      scr.items = [...out, ans].sort((a, b) => a - b).map(fmt);
+      return;
+    }
+  }
+
 
   // ---- Silent WAV (browser fallback for /api/say) ----
   function silentWav(ms) {
@@ -506,7 +633,7 @@
 
   const routes = {
     "GET /api/health": async () => J({
-      ok: true, model: "on-device", llm_healthy: true, kids: Object.keys(KIDS), engine: "brainforest",
+      ok: true, model: "on-device", llm_healthy: true, kids: Object.keys(KIDS_all()), engine: "brainforest",
     }),
 
     "GET /api/kids": async () => J({
@@ -601,7 +728,7 @@
         s.ended_at = nowISO();
         s.seconds_active = (body || {}).seconds || 0;
         s.activities_done = (body || {}).activities || 0;
-        persist();
+        persist(true);
       }
       return J({ ok: true });
     },
@@ -636,25 +763,82 @@
       const themePin = body.theme || getPref(kid, "favorite_theme") || kid.default_theme;
       const tiers = skillTiers(kid);
 
-      const mastery = masterySummary(kid);
-      const weak = mastery.filter(m => m.score < 0.6).map(m => m.skill);
-      const targetSkill = (weak.length && Math.random() < 0.5) ? choice(weak) : null;
-
+      const db = kidDB(kid);
+      const bankSkills = [...new Set(bankForGrade(kid.grade).map(a => a.skill))];
       const validSkills = new Set((PATH_CURRICULUM[kid.grade] || []).map(n => n.key));
       const focusSkill = body.skill;
-      const recentTitles = new Set(history.map(h => h.prompt).filter(Boolean));
-      const pred = (t) => withinCaps(kid, tiers, t);
 
-      const serveCapped = (skill) => {
-        const band = tierCaps(kid, skill, tiers).band;
-        return bankServe(kid, {
-          skill, theme: themePin, excludeTitles: recentTitles,
-          minDifficulty: band[0], maxDifficulty: band[1], predicate: pred,
-        });
-      };
+      // Pick the skill FIRST, then use that skill's own level. Using the lowest
+      // level across every skill kept the whole app at the starting difficulty.
+      let skill;
+      if (focusSkill && validSkills.has(focusSkill)) skill = focusSkill;
+      else {
+        const weak = masterySummary(kid)
+          .filter(m => m.score < 0.6 && bankSkills.includes(m.skill)).map(m => m.skill);
+        if (weak.length && Math.random() < 0.3) skill = choice(weak);
+        else {
+          // Even rotation across the grade's skills, never the same one twice
+          // running. A skill with only a handful of questions gets a smaller
+          // share so one spelling word isn't asked thirty times a week.
+          const others = bankSkills.filter(sk => sk !== db.lastSkill);
+          const pick = others.length ? others : bankSkills;
+          const size = {};
+          for (const a of bankForGrade(kid.grade)) size[a.skill] = (size[a.skill] || 0) + 1;
+          const w = pick.map(sk => Math.min(size[sk] || 1, 12));
+          let r = Math.random() * w.reduce((x, y) => x + y, 0);
+          skill = pick[pick.length - 1];
+          for (let i = 0; i < pick.length; i++) { r -= w[i]; if (r < 0) { skill = pick[i]; break; } }
+        }
+      }
 
-      if (focusSkill && validSkills.has(focusSkill)) return J(serveCapped(focusSkill));
-      return J(serveCapped(targetSkill));
+      // Recent questions live in the kid's own record (not the app's 8-item
+      // history), so the one on screen and the ones from last session are skipped too.
+      const recentKey = "g" + kid.grade;
+      if (!db.recentServed || db.recentServed.grade !== recentKey) db.recentServed = { grade: recentKey, ids: [] };
+
+      // Three misses in a row: ease off right away. Switch to a subject she's
+      // doing well in (when there is one) at its easiest level, so the next
+      // question is a win, instead of waiting for the running score to sink.
+      const frustrated = !!body.frustration;
+      const mBySkill = {};
+      for (const m of masterySummary(kid)) mBySkill[m.skill] = m;
+      if (frustrated && !(focusSkill && validSkills.has(focusSkill))) {
+        const strong = bankSkills.filter(sk => mBySkill[sk] && mBySkill[sk].score >= 0.75);
+        if (strong.length) skill = choice(strong);
+      }
+      const useTiers = frustrated ? Object.assign({}, tiers, { [skill]: 0 }) : tiers;
+      const easiest = (g) => (TIER_CAPS[g] || TIER_CAPS[1])[0].band;
+      const hasSkill = (g) => !!(CONTENT.bank[g] && CONTENT.bank[g].some(a => a.skill === skill));
+
+      // Stretch and support: at the top level of a subject, now and then pull
+      // the same subject from the next grade up; stuck at the bottom, now and
+      // then from the grade below. Content stops being a ceiling or a wall.
+      const m = mBySkill[skill];
+      const tier = useTiers[skill] || 0;
+      let serveGrade = kid.grade, band = tierCaps(kid, skill, useTiers).band, capped = true;
+      if (frustrated) {
+        // Easiest questions this subject actually has (bank difficulty labels
+        // differ by subject, so the grade's first band can still be hard).
+        const ds = bankForGrade(kid.grade).filter(a => a.skill === skill).map(a => a.difficulty);
+        const lo = ds.length ? Math.min(...ds) : easiest(kid.grade)[0];
+        band = [lo, lo];
+      }
+      else if (tier === 3 && Math.random() < 0.3 && hasSkill(kid.grade + 1)) {
+        serveGrade = kid.grade + 1; band = easiest(serveGrade); capped = false;
+      } else if (tier === 0 && m && m.attempts >= 6 && m.score < 0.45 && Math.random() < 0.3 && hasSkill(kid.grade - 1)) {
+        serveGrade = kid.grade - 1; band = easiest(serveGrade); capped = false;
+      }
+      const out = bankServe(kid, {
+        skill, theme: themePin, band, grade: serveGrade,
+        predicate: capped ? (t) => withinCaps(kid, useTiers, t) : null,
+        recentIds: db.recentServed.ids,
+      });
+      if (serveGrade !== kid.grade) out.stretch = serveGrade > kid.grade ? "up" : "down";
+      db.recentServed.ids.push(out.bank_id);
+      cap(db.recentServed.ids, 60);
+      db.lastSkill = skill;
+      persist();
+      return J(out);
     },
 
     "POST /api/fact": async (body) => {
@@ -683,7 +867,9 @@
       body = body || {};
       const expected = String(body.expected || "").trim().toLowerCase();
       const got = String(body.got || "").trim().toLowerCase();
-      if (got && (got === expected || expected.includes(got) || got.includes(expected))) {
+      // Whole-word match only: "2" must not pass for 12, "a" must not pass for "cat".
+      const padded = " " + got.split(/[^a-z0-9']+/).filter(Boolean).join(" ") + " ";
+      if (got && expected && (got === expected || padded.includes(" " + expected + " "))) {
         return J({ correct: true, feedback: "exact" });
       }
       const nums = { zero:"0", one:"1", two:"2", three:"3", four:"4", five:"5",
@@ -719,7 +905,7 @@
         const score = m ? m.score : 0;
         const attempts = m ? m.attempts : 0;
         const correct = m ? m.correct : 0;
-        const status = attempts === 0 ? "new" : (score >= MASTERED_AT ? "mastered" : "learning");
+        const status = attempts === 0 ? "new" : (score >= MASTERED_AT && attempts >= 8 ? "mastered" : "learning");
         return { ...item, score: Math.round(score * 1000) / 1000, attempts, correct, status };
       });
       return J({
