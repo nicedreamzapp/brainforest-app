@@ -2432,6 +2432,11 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
   // Shown to Android players too, so the store gets named per platform.
   const STORE_NAME = /Android/i.test(navigator.userAgent) ? "Google Play" : "the App Store";
   const send = (cmd) => { try { iapNative && iapNative.postMessage({ cmd }); } catch (_) {} };
+  // Typed gift codes are off inside the iOS app: Apple rejects any typed code that unlocks paid
+  // content (guideline 3.1.1, RealTime Space 1.3.3 on 2026-09-28) and the store gate blocks it.
+  // The iOS shell is the one with the bfIAP StoreKit bridge (never sniff the user agent).
+  // Android and the web keep the codes. Codes already redeemed stay unlocked.
+  const CODES_ON = !iapNative;
 
   let PRICE = "$1.99";
   let pendingBuy = null, pendingRestore = null;
@@ -2501,7 +2506,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
         <h2>Your free adventure is complete!</h2>
         <p>You explored Brainforest free for ${TRIAL_DAYS} days.<br>It's only <b>${PRICE}</b> to keep it going <b>forever</b> — ask a grown-up!</p>
         <button class="ug-main" id="ug-grownup">I'm a grown-up</button>
-        <button class="ug-link" id="ug-code-open">I have a code</button>
+        <button class="ug-link${CODES_ON ? "" : " hidden"}" id="ug-code-open">I have a code</button>
       </div>
       <div class="ug-card hidden" id="ug-gate">
         <h2>Grown-ups only</h2>
@@ -2522,7 +2527,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
         </ul>
         <button class="ug-main" id="bf-buy-btn">Unlock forever — ${PRICE}</button>
         <button class="ug-link" id="ug-restore">Restore Purchases</button>
-        <button class="ug-link" id="ug-code-open2">I have a code</button>
+        <button class="ug-link${CODES_ON ? "" : " hidden"}" id="ug-code-open2">I have a code</button>
         <p class="ug-note hidden" id="ug-msg"></p>
         <button class="ug-link hidden" id="ug-later">Keep learning for now</button>
         <p class="ug-fine">One-time purchase. No recurring charges, ever.</p>
@@ -2561,7 +2566,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
       show("ug-gate");
     } else if (window.__BF_GATE_STEP === "buy") {
       show("ug-buy"); send("status");
-    } else if (window.__BF_GATE_STEP === "code") {
+    } else if (window.__BF_GATE_STEP === "code" && CODES_ON) {
       show("ug-code-card");          // BF_GATE_STEP=code — screenshot the gift-code card
     } else if (opts.start === "gate") {
       // Opened from the parent dashboard mid-trial: skip the trial-over card,
@@ -2635,6 +2640,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
     // confusing steps.")
     let codeCameFrom = "ug-kid";
     const openCode = (from) => {
+      if (!CODES_ON) return;
       codeCameFrom = from;
       document.getElementById("ug-code-msg").classList.add("hidden");
       show("ug-code-card");
@@ -2651,6 +2657,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
       m.textContent = t; m.classList.remove("hidden");
     };
     const submitCode = async () => {
+      if (!CODES_ON) return;
       const cleaned = (document.getElementById("ug-code").value || "")
         .toUpperCase().replace(/[\s-]/g, "");
       if (!cleaned) return;
