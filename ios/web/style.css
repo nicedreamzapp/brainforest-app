@@ -1346,10 +1346,11 @@ body:has(.fact-toast.show) #lesson .stage { padding-top: 150px; }
   #lesson .options .option-btn { max-width: calc(100vw - 40px); }
 }
 
-/* ===== Landscape: everything stays neat when the phone is sideways =====
-   Short viewports (phone landscape): shrink the header art, tighten grids,
-   and use the extra width instead of the missing height. */
-@media (orientation: landscape) and (max-height: 560px) {
+/* ===== Short, wide windows: everything stays neat =====
+   A phone held sideways, a folded phone in landscape, or any short window:
+   shrink the header art, tighten grids, and use the extra width instead of
+   the missing height. Keyed off the window's shape, not device orientation. */
+@media (min-aspect-ratio: 1/1) and (max-height: 560px) {
   .big-title { font-size: clamp(30px, 7vh, 48px); }
   .big-sub { font-size: 16px; margin: 4px 0 10px; }
   .screen { justify-content: flex-start; overflow-y: auto; }
@@ -1359,7 +1360,7 @@ body:has(.fact-toast.show) #lesson .stage { padding-top: 150px; }
   .kid-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
   .kid-card { min-width: 180px; padding: 12px 18px; }
   .kid-emoji { font-size: 40px; }
-  .kid-name { font-size: 22px; }
+  .kid-name { font-size: 24px; }  /* stays in the large-text contrast band */
   .cta-row { flex-direction: row !important; gap: 10px; }
   #lesson .stage { padding-top: 6px; }
   .title-big { font-size: clamp(28px, 9vh, 54px) !important; margin: 2px 0; }
@@ -2106,3 +2107,142 @@ html.perf-lite .modal { background: rgba(0,0,0,0.6) !important; }
 html.perf-lite .sticker-pop, html.perf-lite .bubble, html.perf-lite .options button.right,
 html.perf-lite .options button.wrong { animation-duration: 250ms !important; }
 html.perf-lite .celebrate .big-star, html.perf-lite #celebrate-text { animation-duration: 900ms !important; }
+
+/* =====================================================================
+   RESIZABLE WINDOWS (iPhone Duo folded/unfolded, iPad split + windows,
+   phone landscape). Every rule here keys off the WINDOW's own width,
+   height and shape, never the device, the screen, or its orientation,
+   so the layout re-flows live when the window changes size.
+   ===================================================================== */
+
+/* Fixed corner controls respect the side insets a sideways phone has. */
+@media (min-width: 541px) {
+  .voice-toggle { right: max(18px, env(safe-area-inset-right)); }
+}
+.parent-link {
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* A short window must never push a modal's buttons off the top or bottom. */
+.modal { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+                  max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.modal-card { max-height: 100%; overflow-y: auto; box-sizing: border-box; }
+@media (max-height: 560px) {
+  .modal-card { padding: 18px 24px; }
+  .modal-card h2 { font-size: 28px; margin-bottom: 8px; }
+  .modal-card input { margin-bottom: 8px; padding: 10px 14px; }
+  #addkid .grade-row { margin: 6px 0 10px; }
+  #addkid .grade-btn { padding: 9px 2px !important; }
+  .modal-card button { padding: 12px; }
+}
+
+/* Short windows: the empty footer under the answers gives its height back,
+   and all eight worlds sit on one row instead of a second row below the fold. */
+@media (max-height: 560px) {
+  #lesson .actions:has(> .next-btn.hidden) { padding-top: 0; padding-bottom: 4px; min-height: 0; }
+  #welcome .theme-grid { grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)) !important; gap: 8px; }
+  #welcome .theme-card { font-size: 12px; padding-inline: 4px; }
+}
+
+/* Lesson HUD: from 900px down the voice button moves to the top-left corner,
+   so the HUD clears it there and takes back the right-hand space it no
+   longer needs (the pills were running underneath the button). */
+@media (max-width: 900px) {
+  body:has(#lesson.active) #lesson .hud {
+    padding-left: calc(max(12px, env(safe-area-inset-left)) + 62px) !important;
+    padding-right: max(14px, env(safe-area-inset-right)) !important;
+  }
+}
+
+/* Wider than 900px the voice button stays top-right: the HUD keeps clear of
+   it AND of a sideways phone's camera/rounded-corner insets. */
+@media (min-width: 901px) {
+  #lesson .hud {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: calc(max(18px, env(safe-area-inset-right)) + 92px);
+  }
+}
+
+/* Mid-width windows (iPad split view, a narrow unfolded window): four worlds
+   per row fit comfortably, so the picker no longer needs to scroll. */
+@media (min-width: 541px) and (max-width: 720px) {
+  .theme-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+}
+
+/* Single-column lessons in a wide window (iPad, an unfolded iPhone held
+   upright, near-square windows): keep the answers a comfortable block in the
+   middle instead of stretching edge to edge. */
+@media (min-width: 700px) {
+  #lesson .options { max-width: min(100%, 780px) !important; margin-inline: auto !important; }
+}
+/* ...and a wide-but-not-tall window keeps the trace box AND its Done button
+   on screen instead of letting Done fall below the fold. */
+@media (min-width: 640px) and (max-aspect-ratio: 1/1) {
+  .trace-box { --trace: min(80vw, 440px, max(240px, calc(100vh - 470px))); width: var(--trace); height: var(--trace); }
+  .trace-box .ghost { font-size: calc(var(--trace) * 0.7); }
+}
+
+/* WIDE WINDOWS (unfolded iPhone Duo, iPad landscape or a square-ish split,
+   phone landscape):
+   the question sits on the left, the answers on the right. Uses the extra
+   width instead of shrinking everything to fit a phone-shaped column.
+   .content becomes layout-transparent so its children join the stage grid;
+   empty auto rows collapse to nothing because the row gap is zero. */
+@media (min-aspect-ratio: 1/1) and (min-width: 640px) {
+  #lesson .stage {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+    grid-template-rows: minmax(0, 1fr) repeat(7, auto) minmax(0, 1fr);
+    gap: 0 clamp(20px, 3.2vw, 56px) !important;
+    align-items: center !important;
+    justify-items: center;
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto !important;
+    padding: 8px max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left)) !important;
+  }
+  #lesson .stage > .content { display: contents; }
+  #lesson .stage > .bubble       { grid-column: 1; grid-row: 2; max-width: 100%; margin: 0 0 8px !important; }
+  #lesson .stage > #repeat-btn   { grid-column: 1; grid-row: 3; margin: 0 0 6px !important; }
+  #lesson .content > .title-big  { grid-column: 1; grid-row: 4; max-width: 100%; margin: 4px 0 !important; }
+  #lesson .content > .challenge-chip { grid-column: 1; grid-row: 5; }
+  #lesson .content > .question-visual,
+  #lesson .content > .scene-emojis { grid-column: 1; grid-row: 6; margin: 6px 0 !important; }
+  #lesson .content > .prompt-line,
+  #lesson .content > .loading-dots { grid-column: 1; grid-row: 7; }
+  #lesson .content > .hear-btn   { grid-column: 1; grid-row: 8; margin: 8px 0 0 !important; }
+  /* answers: their own column, vertically centred against the question */
+  #lesson .content > .options {
+    grid-column: 2; grid-row: 1 / -1;
+    align-self: center;
+    width: 100%;
+    max-width: 680px !important;
+    margin: 0 !important;
+  }
+  #lesson .options button { min-height: clamp(64px, 17vh, 180px); }
+  /* reading passages read better a little wider than half */
+  #lesson .stage:has(.title-big.paragraph) { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  #lesson .content > .title-big.paragraph { max-height: 52vh; overflow-y: auto; }
+  /* the question pill may use the column's height, not a phone's 46vh */
+  #lesson .bubble .said { max-height: max(46vh, calc(100vh - 220px)); }
+  /* tracing: the big box takes the right column, Done sits under it */
+  #lesson .content > .trace-box,
+  #lesson .content > .trace-actions { --trace: min(40vw, calc(100vh - 230px), 460px); }
+  #lesson .content > .trace-box {
+    grid-column: 2; grid-row: 1 / -1; align-self: center;
+    width: var(--trace); height: var(--trace);
+    transform: translateY(-32px);       /* box + Done centred as one group */
+  }
+  #lesson .content > .trace-box .ghost { font-size: calc(var(--trace) * 0.7); }
+  #lesson .content > .trace-actions {
+    grid-column: 2; grid-row: 1 / -1; align-self: center; margin: 0 !important;
+    transform: translateY(calc(var(--trace) / 2 + 6px));
+  }
+}
+
+/* Big gradient titles reach ~120px in wide windows; at line-height 1 the
+   glyph tops/bottoms poked past the box and lost their gradient fill. */
+@media (min-width: 900px) {
+  .big-title { padding-block: 0.06em; }
+}

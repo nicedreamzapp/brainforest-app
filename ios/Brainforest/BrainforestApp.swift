@@ -21,15 +21,60 @@ struct BrainforestApp: App {
     }
 }
 
+// The whole UI is the web view, and it always fills whatever window the system
+// gives the app: a folded or unfolded iPhone, either orientation, an iPad split
+// or a freely resized iPad window. Nothing here reads the screen or the device
+// orientation; the web layer lays itself out from its own viewport size and
+// re-lays out on every resize.
 struct ContentView: View {
     var body: some View {
-        BrainWebView()
+        webContent
             .ignoresSafeArea()
             .background(Color(red: 0.98, green: 0.95, blue: 1.0))
             .statusBarHidden(true)
             .persistentSystemOverlays(.hidden)
     }
+
+    @ViewBuilder private var webContent: some View {
+        #if DEBUG
+        if let size = DebugWindow.frame {
+            // BF_FRAME=WxH: pin the web view to a split-window size so layout
+            // checks can run headlessly at sizes simctl cannot set on its own.
+            BrainWebView()
+                .frame(width: size.width, height: size.height)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            BrainWebView()
+        }
+        #else
+        BrainWebView()
+        #endif
+    }
 }
+
+#if DEBUG
+// Test-only hooks for headless simulator layout runs (set via SIMCTL_CHILD_*).
+enum DebugWindow {
+    static var frame: CGSize? {
+        guard let spec = ProcessInfo.processInfo.environment["BF_FRAME"] else { return nil }
+        let parts = spec.lowercased().split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return nil }
+        return CGSize(width: parts[0], height: parts[1])
+    }
+
+    /// BF_ORIENT=landscape|portrait asks the scene to rotate, since simctl has
+    /// no rotate command. Exercises the same resize path a real rotation does.
+    @MainActor static func applyOrientation() {
+        guard let want = ProcessInfo.processInfo.environment["BF_ORIENT"],
+              let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first
+        else { return }
+        let mask: UIInterfaceOrientationMask = want == "landscape" ? .landscapeRight : .portrait
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { error in
+            print("[debug] orientation request failed: \(error)")
+        }
+    }
+}
+#endif
 
 // MARK: - Store (persistent JSON)
 
@@ -419,9 +464,11 @@ struct BrainWebView: UIViewRepresentable {
         // UI tour for automated screenshot sweeps (BF_UITOUR=1 via simctl).
         if ProcessInfo.processInfo.environment["BF_UITOUR"] != nil {
             let noBadge = ProcessInfo.processInfo.environment["BF_NOBADGE"] != nil ? "window.__BF_NOBADGE = 1;" : ""
-            ucc.addUserScript(WKUserScript(source: "window.__BF_UITOUR = 1; \(noBadge) window.__BF_STORE = {kids:{},kv:{}};",
+            let stepMS = Int(ProcessInfo.processInfo.environment["BF_TOUR_STEP_MS"] ?? "") ?? 0
+            ucc.addUserScript(WKUserScript(source: "window.__BF_UITOUR = 1; \(noBadge) window.__BF_TOUR_STEP_MS = \(stepMS); window.__BF_STORE = {kids:{},kv:{}};",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { DebugWindow.applyOrientation() }
         #endif
         config.userContentController = ucc
 

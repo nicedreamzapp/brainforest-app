@@ -1593,7 +1593,10 @@ function renderActivity(p) {
     // Fit-to-FILL: buttons are equal-size grid cells; grow each label until it
     // would overflow its cell, then unify the whole set to the smallest fit so
     // every answer matches. Fills big tablet buttons, never spills on phones.
-    requestAnimationFrame(() => {
+    // Re-fit whenever the buttons change size (window resized, phone
+    // folded/unfolded or rotated) so labels never spill or stay tiny.
+    const fitLabels = () => {
+      if (!opts.isConnected) return;
       const labels = Array.from(opts.querySelectorAll('.option-label'));
       if (!labels.length) return;
       let unified = Infinity;
@@ -1612,7 +1615,9 @@ function renderActivity(p) {
         unified = Math.min(unified, fs);
       });
       labels.forEach(lbl => { lbl.style.fontSize = unified + 'px'; });
-    });
+    };
+    requestAnimationFrame(fitLabels);
+    watchSize(opts, fitLabels);
   }
 
   // Safety net: if backend forgot tap items, auto-skip to the next activity
@@ -1627,12 +1632,45 @@ function renderActivity(p) {
   }
 }
 
+// Calls fn (on the next frame) whenever el's rendered size changes — window
+// resize, rotation, fold/unfold, split view. Stops once el leaves the page.
+function watchSize(el, fn) {
+  if (!window.ResizeObserver) return;
+  let w = 0, h = 0, queued = false;
+  const ro = new ResizeObserver(() => {
+    if (!el.isConnected) { ro.disconnect(); return; }
+    const r = el.getBoundingClientRect();
+    if (Math.abs(r.width - w) < 1 && Math.abs(r.height - h) < 1) return;
+    const first = !w && !h;
+    w = r.width; h = r.height;
+    if (first || queued) return;      // initial layout is handled by the caller
+    queued = true;
+    requestAnimationFrame(() => { queued = false; fn(); });
+  });
+  ro.observe(el);
+}
+
 function setupTrace(box) {
   const canvas = box.querySelector("canvas");
-  const rect = box.getBoundingClientRect();
-  canvas.width = rect.width; canvas.height = rect.height;
+  // Size the bitmap to the canvas's own box (inside the dashed border) so one
+  // canvas pixel is one CSS pixel and the ink lands exactly under the finger.
+  canvas.width = box.clientWidth; canvas.height = box.clientHeight;
   const ctx = canvas.getContext("2d");
-  ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.strokeStyle = "#1fa06b";
+  const pen = () => { ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.strokeStyle = "#1fa06b"; };
+  pen();
+  // The box changes size when the window does (fold/unfold, rotate, split).
+  // Match the canvas to it and carry the kid's stroke over, scaled, so the ink
+  // stays under her finger and nothing she traced is lost.
+  watchSize(box, () => {
+    const w = box.clientWidth, h = box.clientHeight;
+    if (!w || !h || (w === canvas.width && h === canvas.height)) return;
+    const keep = document.createElement("canvas");
+    keep.width = canvas.width; keep.height = canvas.height;
+    keep.getContext("2d").drawImage(canvas, 0, 0);
+    canvas.width = w; canvas.height = h;
+    ctx.drawImage(keep, 0, 0, w, h);
+    pen();
+  });
   let drawing = false;
   let hasDrawn = false;
   const pos = (e) => {
@@ -2269,8 +2307,8 @@ function fireConfetti() {
   const canvas = $("confetti");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  const W = canvas.width = window.innerWidth;
-  const H = canvas.height = window.innerHeight;
+  let W = canvas.width = window.innerWidth;
+  let H = canvas.height = window.innerHeight;
   const colors = ["#ff3aa1","#6b4eff","#00b894","#ffd166","#4ea8ff","#ff8a4d"];
   const lite = !!(window.BF_PERF && BF_PERF.isLite());
   const pieces = [];
@@ -2290,6 +2328,10 @@ function fireConfetti() {
   let t0 = performance.now();
   function frame(t) {
     const dt = Math.min(40, t - t0); t0 = t;
+    // follow the window if it changes size mid-burst (fold/unfold, rotate)
+    if (W !== window.innerWidth || H !== window.innerHeight) {
+      W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight;
+    }
     ctx.clearRect(0,0,W,H);
     let alive = 0;
     for (const p of pieces) {

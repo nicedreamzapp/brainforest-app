@@ -7,7 +7,7 @@
    app container after the run. */
 (function () {
   if (!window.__BF_UITOUR) return;
-  const STEP_MS = 2500;
+  const STEP_MS = window.__BF_TOUR_STEP_MS || 2500;  // headless harness slows it down
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const $ = (id) => document.getElementById(id);
   const cls = (el, c, on) => el && el.classList[on ? "add" : "remove"](c);
@@ -21,7 +21,8 @@
   const badge = document.createElement("div");
   badge.style.cssText = "position:fixed;bottom:4px;right:6px;z-index:99999;background:#000c;color:#0f0;" +
     "font:700 11px monospace;padding:3px 8px;border-radius:6px;pointer-events:none;";
-  const step = (name) => { badge.textContent = "TOUR:" + name; document.title = name; };
+  const step = (name) => { badge.textContent = "TOUR:" + name; document.title = name;
+    try { BF.kv.set("uitour_step", name); } catch (_) {} };  // lets a headless harness follow along
 
   const AUDIT = { issues: [], steps: [], vw: innerWidth, vh: innerHeight };
   const TAPPABLE = "button, .option-btn, .voice-toggle, .kid-card, .theme-card, .path-island, .grade-btn";
