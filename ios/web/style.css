@@ -2246,3 +2246,30 @@ html.perf-lite .celebrate .big-star, html.perf-lite #celebrate-text { animation-
 @media (min-width: 900px) {
   .big-title { padding-block: 0.06em; }
 }
+
+/* SIDE CAMERA, UPRIGHT WINDOW (iPhone Duo folded): the cover screen's camera
+   sits on the right edge, so an upright window reports an 84pt right inset,
+   not just a sideways one. Side insets apply in every window shape. */
+#kid-picker {
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+}
+.path-map, .path-progress { max-width: 100%; }   /* 94vw ignored the screen's inset padding */
+@media (max-width: 540px) {
+  body:has(#kid-picker.active) .voice-toggle,
+  body:has(#welcome.active) .voice-toggle,
+  body:has(#path.active) .voice-toggle,
+  body:has(#stickerbook.active) .voice-toggle { right: max(14px, env(safe-area-inset-right)); }
+}
+@media (max-aspect-ratio: 999/1000), (max-width: 639px) {
+  #lesson .stage {
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+  }
+}
+/* Short upright windows (folded Duo, SE-height phones): the trace box shrinks
+   with the window's height so the Done button stays on screen. */
+@media (max-width: 639px) {
+  .trace-box { --trace: min(80vw, 440px, max(220px, calc(100vh - 410px))); width: var(--trace); height: var(--trace); }
+  .trace-box .ghost { font-size: calc(var(--trace) * 0.7); }
+}
