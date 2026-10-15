@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brainforest: Offline Learning for K-4 Kids</title>
+<meta name="description" content="Brainforest is a kids' learning app for iPhone, iPad and Android. Narrated math, reading and science for grades K-4. Works fully offline. No ads, no accounts, no data collected.">
+<!-- TODO-VERIFY: canonical assumes the page will live at the product URL listed in README.md -->
+<link rel="canonical" href="https://nicedreamzwholesale.com/software/brainforest/">
+<link rel="icon" href="../ios/Brainforest/Assets.xcassets/AppIcon.appiconset/icon-1024.png">
+
+<!-- Open Graph / Twitter. Social cards need absolute image URLs.
+     TODO-VERIFY: upload icon-1024.png and 02-clock.png to the live site and confirm these URLs. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nice Dreamz">
+<meta property="og:title" content="Brainforest: offline learning for K-4 kids">
+<meta property="og:description" content="Narrated math, reading and science for grades K-4. 2,039 activities, works with no internet, no ads, no accounts, no data collected. iPhone, iPad and Android.">
+<meta property="og:url" content="https://nicedreamzwholesale.com/software/brainforest/">
+<meta property="og:image" content="https://nicedreamzwholesale.com/software/brainforest/02-clock.png">
+<meta property="og:image:alt" content="Brainforest question screen: an analog clock showing 3:30 with four answer buttons">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Brainforest: offline learning for K-4 kids">
+<meta name="twitter:description" content="Narrated math, reading and science for grades K-4. Works offline. No ads, no accounts, no data collected.">
+<meta name="twitter:image" content="https://nicedreamzwholesale.com/software/brainforest/02-clock.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Brainforest",
+  "alternateName": "Brainforest: Kids Learning K-4",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "iOS 17.0 or later (iPhone, iPad); Android 8.0 or later",
+  "description": "An offline learning adventure for K-4 kids. A child answers narrated math, reading and science questions to climb a treehouse, and all progress stays on the device.",
+  "url": "https://nicedreamzwholesale.com/software/brainforest/",
+  "downloadUrl": [
+    "https://apps.apple.com/us/app/id6788301765",
+    "https://play.google.com/store/apps/details?id=com.brainforest.app"
+  ],
+  "softwareVersion": "iOS 1.4, Android 1.7",
+  "isAccessibleForFree": true,
+  "offers": [
+    {"@type": "Offer", "name": "60-day free trial", "price": "0", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "Brainforest Forever (one-time unlock)", "price": "1.99", "priceCurrency": "USD"}
+  ],
+  "audience": {"@type": "EducationalAudience", "educationalRole": "student", "audienceType": "Children in kindergarten through 4th grade"},
+  "author": {"@type": "Person", "name": "Matt Macosko"},
+  "publisher": {"@type": "Organization", "name": "Nice Dreamz LLC", "email": "info@nicedreamzwholesale.com"},
+  "license": "https://opensource.org/licenses/MIT"
+}
+</script>
+
+<style>
+  :root {
+    --bg: #f6f3fb;
+    --surface: #ffffff;
+    --ink: #22163f;
+    --muted: #5a4f74;
+    --accent: #5b3fd6;
+    --accent-ink: #ffffff;
+    --leaf: #12806a;
+    --line: #e2dcf0;
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17122a;
+      --surface: #221b3b;
+      --ink: #f1edfb;
+      --muted: #bdb3d8;
+      --accent: #a996ff;
+      --accent-ink: #17122a;
+      --leaf: #5fd3b6;
+      --line: #3a3060;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17122a;
+    --surface: #221b3b;
+    --ink: #f1edfb;
+    --muted: #bdb3d8;
+    --accent: #a996ff;
+    --accent-ink: #17122a;
+    --leaf: #5fd3b6;
+    --line: #3a3060;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow-wrap: break-word;
+  }
+  img { max-width: 100%; height: auto; display: block; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible { outline: 3px solid var(--leaf); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  h1, h2, h3 { line-height: 1.2; margin: 0 0 12px; }
+  h1 { font-size: clamp(30px, 8vw, 48px); }
+  h2 { font-size: clamp(23px, 5vw, 30px); }
+  h3 { font-size: 18px; }
+  p { margin: 0 0 14px; }
+  .muted { color: var(--muted); }
+
+  header.hero { padding: 36px 0 32px; }
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .brand img { width: 64px; height: 64px; border-radius: 15px; }
+  .brand span { font-weight: 700; font-size: 20px; }
+  .pitch { font-size: clamp(19px, 4.4vw, 23px); max-width: 40ch; }
+
+  .stores { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 10px; }
+  .store {
+    display: inline-flex; flex-direction: column; justify-content: center;
+    min-height: 56px; padding: 8px 20px; border-radius: 12px;
+    background: var(--ink); color: var(--bg); text-decoration: none; line-height: 1.2;
+  }
+  .store small { font-size: 12px; opacity: .85; }
+  .store b { font-size: 18px; }
+  .price { font-size: 15px; }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 24px; }
+  .fact { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .fact b { display: block; font-size: 26px; color: var(--leaf); }
+  .fact span { font-size: 14px; color: var(--muted); }
+
+  .shots {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 760px) { .shots { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  .shots figure { margin: 0; }
+  .shots img { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+  .shots figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+  .features { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 10px 0 0; }
+
+  code { font-size: .9em; background: var(--line); padding: 1px 5px; border-radius: 5px; }
+  footer { padding: 32px 0 48px; border-top: 1px solid var(--line); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">
+      <img src="../ios/Brainforest/Assets.xcassets/AppIcon.appiconset/icon-1024.png" alt="" width="64" height="64">
+      <span>Brainforest</span>
+    </div>
+    <h1>Offline learning for K-4 kids.</h1>
+    <p class="pitch">A narrator reads every question out loud, your child climbs a treehouse by answering, and nothing ever leaves the device.</p>
+
+    <div class="stores">
+      <a class="store" href="https://apps.apple.com/us/app/id6788301765"><small>Download on the</small><b>App Store</b></a>
+      <a class="store" href="https://play.google.com/store/apps/details?id=com.brainforest.app"><small>Get it on</small><b>Google Play</b></a>
+    </div>
+    <!-- TODO-VERIFY: swap these text buttons for Apple's and Google's official badge artwork before publishing. -->
+    <p class="price muted">Free for 60 days, then a one-time $1.99 unlock. No subscription. iPhone, iPad and Android.</p>
+
+    <div class="facts">
+      <div class="fact"><b>2,039</b><span>activities, kindergarten to 4th grade</span></div>
+      <div class="fact"><b>726</b><span>"Did you know?" facts</span></div>
+      <div class="fact"><b>7</b><span>quest themes</span></div>
+      <div class="fact"><b>0</b><span>ads, accounts or data collected</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section aria-labelledby="what">
+  <div class="wrap">
+    <h2 id="what">What it does</h2>
+    <p>Brainforest is a learning game for kids in kindergarten through 4th grade. A child picks a theme, then answers math, reading, science and social studies questions to climb a treehouse, earning stickers along the way and a named treasure at the end of each quest.</p>
+    <p>Every question and every answer choice is spoken by a recorded narrator, so kids who can't read yet, or who read slowly, can still play on their own. The difficulty adjusts per skill as a child shows mastery, and questions they miss come back later for another try.</p>
+    <p>It runs entirely on the phone or tablet. No internet, no sign-up, no ads. Progress is saved on the device and nowhere else.</p>
+  </div>
+</section>
+
+<section aria-labelledby="shots">
+  <div class="wrap">
+    <h2 id="shots">Screenshots</h2>
+    <div class="shots">
+      <figure>
+        <img src="../ios/appstore/screenshots/iphone/02-clock.png" alt="Telling time question: an analog clock showing 3:30 and four answer buttons, 3:30, 6:15, 3:00 and 4:30." loading="lazy" width="1320" height="2868">
+        <figcaption>Telling time on a real analog clock</figcaption>
+      </figure>
+      <figure>
+        <img src="../ios/appstore/screenshots/iphone/03-coins.png" alt="Money question: a quarter, two dimes and a penny, with the prompt 'Count the coins! How many cents is this?' and four answer choices." loading="lazy" width="1320" height="2868">
+        <figcaption>Counting real coins</figcaption>
+      </figure>
+      <figure>
+        <img src="../ios/appstore/screenshots/iphone/04-celebrate.png" alt="Letter tracing: the letter B in a dashed box with confetti and the word SPECTACULAR after a successful trace." loading="lazy" width="1320" height="2868">
+        <figcaption>Letter tracing for little hands</figcaption>
+      </figure>
+      <figure>
+        <img src="../ios/appstore/screenshots/iphone/05-quest.png" alt="Quest complete card showing a key treasure named Golden Key and the line 'Your first treasure! It's in your sticker book.'" loading="lazy" width="1320" height="2868">
+        <figcaption>A treasure at the end of each quest</figcaption>
+      </figure>
+      <figure>
+        <img src="../ios/appstore/screenshots/iphone/06-path.png" alt="Learning Path map titled '12 islands to explore', with skill islands such as Big Adding, Skip Counting, Money, Telling Time, Reading and Sight Words." loading="lazy" width="1320" height="2868">
+        <figcaption>The Learning Path, one island per skill</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="who">
+  <div class="wrap">
+    <h2 id="who">Who it's for</h2>
+    <p><b>Kids in K-4</b>, including pre-readers. The spoken narration means a five-year-old can play without a grown-up reading the screen for them.</p>
+    <p><b>Families who want screen time without ads or tracking.</b> There's nothing to sign into and nothing to buy inside the game except the one unlock, which sits behind a grown-ups question.</p>
+    <p><b>Road trips, flights and places with bad signal.</b> Everything is on the device, so it works the same with no connection.</p>
+    <p><b>Homes with more than one kid.</b> Each child gets their own profile and grade, with separate progress, stickers and treasures.</p>
+    <p><b>Teachers and parents handing out a copy.</b> Gift codes are short words you can say out loud or write on a slip of paper, and they redeem offline.</p>
+  </div>
+</section>
+
+<section aria-labelledby="features">
+  <div class="wrap">
+    <h2 id="features">Features</h2>
+    <div class="features">
+      <div class="card">
+        <h3>A voice for every line</h3>
+        <p>Questions, answer choices and feedback are pre-recorded clips bundled in the app. There's a button to hear the answer choices again and a voice on/off toggle. The narration was generated with the open Kokoro-82M speech model.</p>
+      </div>
+      <div class="card">
+        <h3>Real teaching pictures</h3>
+        <p>Analog clocks for telling time, coins for money, fraction pies, shapes, and countable objects drawn right into the question.</p>
+      </div>
+      <div class="card">
+        <h3>Adapts per skill</h3>
+        <p>The learning engine tracks mastery skill by skill and only moves up once a child has shown they've got it. Missed questions come back a few questions later. A run of wrong answers is treated as a signal to ease off.</p>
+      </div>
+      <div class="card">
+        <h3>What's covered</h3>
+        <p>Math from counting through multiplication, division, fractions, decimals, time, money and geometry. Phonics, sight words, spelling, vocabulary, grammar and reading comprehension. Science, social studies and feelings.</p>
+      </div>
+      <div class="card">
+        <h3>Quests and rewards</h3>
+        <p>Seven themes (unicorns, mermaids, dinosaurs, space, cats, horses, puppies), a sticker book that keeps everything, named treasures, daily streaks, and a break button when a kid needs one.</p>
+      </div>
+      <div class="card">
+        <h3>Parent dashboard</h3>
+        <p>Skill mastery, accuracy and session history for each child, stored only on the device.</p>
+      </div>
+      <div class="card">
+        <h3>Easy on older phones</h3>
+        <p>The app checks how fast the device is and trims blur, glow and decorative animation on slower hardware. It also respects the system reduce-motion setting. The lessons themselves don't change.</p>
+      </div>
+      <div class="card">
+        <h3>Open source</h3>
+        <p>The full source for both apps is on GitHub under the MIT license, along with the engine tests (38 engine checks and 21 stress tests, all passing on the current code).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="privacy">
+  <div class="wrap">
+    <h2 id="privacy">Privacy</h2>
+    <p>Brainforest collects no data. There are no accounts, no analytics, no advertising and no third-party SDKs or ad networks. Your child's stickers, treasures, skill mastery and history are stored only on your device, and deleting the app deletes them. Nobody at Nice Dreamz ever sees it.</p>
+    <p>The App Store privacy label is "Data Not Collected." The policy is written for COPPA the simplest way: no personal information is collected from anyone, of any age.</p>
+    <p class="muted">Full policy: <a href="https://hq.nicedreamzwholesale.com/brainforest-privacy.html">hq.nicedreamzwholesale.com/brainforest-privacy.html</a></p>
+  </div>
+</section>
+
+<section aria-labelledby="faq">
+  <div class="wrap">
+    <h2 id="faq">FAQ</h2>
+    <details>
+      <summary>Does it really work with no internet?</summary>
+      <p>Yes. The lessons, the narration and your child's progress are all on the device. The only time a store connection matters is when a parent buys the unlock, which goes through Apple or Google.</p>
+    </details>
+    <details>
+      <summary>What does it cost?</summary>
+      <p>It's free for 60 days. After that, a one-time $1.99 purchase unlocks it for good. No subscription. The purchase is behind a parental gate and there's a Restore Purchases button.</p>
+    </details>
+    <details>
+      <summary>What ages and grades?</summary>
+      <p>Kindergarten through 4th grade. You set a grade for each child when you add them. The App Store listing is in the Kids category, ages 6 to 8 band.</p>
+    </details>
+    <details>
+      <summary>Can my child use it if they can't read yet?</summary>
+      <p>Yes. Every question and answer choice is read aloud, and there's a button to hear the choices again.</p>
+    </details>
+    <details>
+      <summary>Can more than one kid use it?</summary>
+      <p>Yes. Add each child with their own grade. Progress, stickers and treasures are kept separate.</p>
+    </details>
+    <details>
+      <summary>Which devices?</summary>
+      <p>iPhone and iPad on iOS 17 or later, and Android 8.0 or later.</p>
+    </details>
+    <details>
+      <summary>How was the content made?</summary>
+      <p>Math questions are generated by code. Reading, science and social studies questions were written and then checked using Anthropic's Claude through the Claude Code command line tool. The narration was recorded with the Kokoro-82M text-to-speech model.</p>
+    </details>
+    <details>
+      <summary>I found a bug.</summary>
+      <p>Email it in. Confirmed bug reports earn extended free time in the app.</p>
+    </details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Brainforest is made by Matt Macosko at Nice Dreamz LLC.</p>
+    <!-- TODO-VERIFY: README.md lists info@nicedreamzwholesale.com, PRIVACY.md lists a different address. Confirm which one goes public. -->
+    <p>Contact: <a href="mailto:info@nicedreamzwholesale.com">info@nicedreamzwholesale.com</a></p>
+    <p>Source code: <a href="https://github.com/nicedreamzapp/brainforest-app">github.com/nicedreamzapp/brainforest-app</a> (MIT)</p>
+    <p class="muted">Narration voice: Kokoro-82M. Content checking: Anthropic Claude via Claude Code. App Store is a trademark of Apple Inc. Google Play is a trademark of Google LLC.</p>
+  </div>
+</footer>
+
+</body>
+</html>
