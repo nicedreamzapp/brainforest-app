@@ -1,0 +1,27 @@
+{
+  "identifier" : "BF1A2B3C",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "BF0000001",
+      "localizations" : [
+        {
+          "description" : "Unlock all 2,000+ lessons forever. One time, no subscription.",
+          "displayName" : "Brainforest Forever",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.brainforest.app.forever",
+      "referenceName" : "Brainforest Forever",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [],
+  "version" : { "major" : 3, "minor" : 0 }
+}

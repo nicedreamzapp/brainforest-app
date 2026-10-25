@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Full-bleed, no ActionBar. Full-screen / hidden status bar is enforced
+         programmatically in MainActivity to match the iOS statusBarHidden look. -->
+    <style name="Theme.Brainforest" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bf_bg</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
+</resources>
