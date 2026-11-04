@@ -499,6 +499,7 @@ function _playNextInQueue() {
     const url = URL.createObjectURL(blob);
     if (_tts_audio) { try { _tts_audio.pause(); } catch(_){} }
     _tts_audio = new Audio(url);
+    if (window.__BF_SILENT) _tts_audio.muted = true;   // quiet test mode
     const vt = document.getElementById("voice-toggle");
     if (vt && STATE.voiceOn) vt.classList.add("speaking");
     const _stopVisual = () => { if (vt) vt.classList.remove("speaking"); };

@@ -18,7 +18,31 @@ struct BrainforestApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { DeepLink.open($0) }
         }
+    }
+}
+
+// Quiet test mode for our own automated runs: launch with the `-silent` argument
+// (or BF_SILENT=1 in the environment). Every voice clip plays at volume 0, so all
+// timing stays exactly as a kid would get it, and the web layer's synthesized game
+// sounds are switched off. Nothing a user can reach turns this on.
+enum TestMode {
+    static let silent: Bool = ProcessInfo.processInfo.arguments.contains("-silent")
+        || ProcessInfo.processInfo.environment["BF_SILENT"] != nil
+}
+
+// brainforest:// links (the App Store in-app event uses brainforest://event/no-wifi).
+// Kids category: a link only ever brings the kid back to the app's own home and
+// quest screen. The URL is never handed to the web view, never loaded, never
+// forwarded anywhere, so no link can leave the app or reach the web.
+enum DeepLink {
+    @MainActor static func open(_ url: URL) {
+        guard url.scheme?.lowercased() == "brainforest" else { return }
+        guard let webView = Narrator.shared.webView else { return }   // cold start: the app opens on home anyway
+        // Already on the home / quest page: leave a quest in progress alone.
+        if webView.url?.lastPathComponent == "index.html" { return }
+        webView.load(URLRequest(url: URL(string: "bf://app/index.html")!))
     }
 }
 
@@ -107,8 +131,13 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelega
         super.init()
         synth.delegate = self
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-        try? session.setActive(true)
+        if TestMode.silent {
+            // quiet test mode: never duck or interrupt anyone else's audio on the test device
+            try? session.setCategory(.ambient, options: [.mixWithOthers])
+        } else {
+            try? session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try? session.setActive(true)
+        }
     }
 
     static func bestVoice() -> AVSpeechSynthesisVoice? {
@@ -175,6 +204,7 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelega
         if let url = recordedURL(for: item.text), let p = try? AVAudioPlayer(contentsOf: url) {
             player = p
             p.delegate = self
+            if TestMode.silent { p.volume = 0 }   // quiet test mode: same timing, no sound
             p.play()
         } else {
             // NO SYNTHESIZER. Every line the app speaks is pre-recorded, so if a
@@ -460,6 +490,10 @@ struct BrainWebView: UIViewRepresentable {
         ucc.add(bridge, name: "bfTTS")
         ucc.add(bridge, name: "bfIAP")
         ucc.add(bridge, name: "bfReview")
+        if TestMode.silent {
+            ucc.addUserScript(WKUserScript(source: "window.__BF_SILENT = 1;",
+                                           injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
         #if DEBUG
         // Force the trial-expired lock screen for testing (BF_TRIAL_EXPIRED=1 via simctl)
         if ProcessInfo.processInfo.environment["BF_TRIAL_EXPIRED"] != nil {
@@ -480,6 +514,12 @@ struct BrainWebView: UIViewRepresentable {
             let stepMS = Int(ProcessInfo.processInfo.environment["BF_TOUR_STEP_MS"] ?? "") ?? 0
             ucc.addUserScript(WKUserScript(source: "window.__BF_UITOUR = 1; \(noBadge) window.__BF_TOUR_STEP_MS = \(stepMS); window.__BF_STORE = {kids:{},kv:{}};",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        // Debug-only: BF_INJECT_JS=<file> runs a test script at document start
+        // (store-preview capture driver). Never compiled into a Release build.
+        if let path = ProcessInfo.processInfo.environment["BF_INJECT_JS"],
+           let js = try? String(contentsOfFile: path, encoding: .utf8) {
+            ucc.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { DebugWindow.applyOrientation() }
         #endif

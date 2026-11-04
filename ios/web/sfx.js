@@ -4,7 +4,9 @@
 (function () {
   "use strict";
   let ctx = null;
-  let muted = false;
+  // Quiet test mode (-silent launch argument / silent intent extra): the native shell
+  // sets window.__BF_SILENT before any script runs, and nothing here ever makes a sound.
+  let muted = !!window.__BF_SILENT;
 
   function ac() {
     if (!ctx) {
@@ -81,7 +83,7 @@
       const f = SOUNDS[name];
       if (f) { try { f(); } catch (_) {} }
     },
-    mute(on) { muted = !!on; },
+    mute(on) { muted = !!on || !!window.__BF_SILENT; },
     prime() { ac(); },   // call inside a user gesture to unlock audio
   };
 })();
