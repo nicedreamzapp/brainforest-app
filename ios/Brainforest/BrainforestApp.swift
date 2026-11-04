@@ -1,7 +1,8 @@
 // Brainforest — self-contained kids' learning world (K-4).
-// Native shell: WKWebView hosting the bundled web app, with four bridges:
+// Native shell: WKWebView hosting the bundled web app, with five bridges:
 //   bfStore  — persists the engine's JSON store to Documents/brainforest_store.json
 //   bfTTS    — speaks via prerecorded voice pack (web/voice/) or AVSpeechSynthesizer
+//   bfReview — StoreKit rating prompt, parent dashboard only (behind the grown-ups question)
 //   bfIAP    — StoreKit 2: "Brainforest Forever" one-time unlock after the 60-day trial
 //   bf://    — custom scheme serving the bundled web/ folder (absolute paths work)
 
@@ -407,6 +408,17 @@ final class BridgeHandler: NSObject, WKScriptMessageHandler {
             if let dict = message.body as? [String: Any], let cmd = dict["cmd"] as? String {
                 Purchases.shared.handle(cmd: cmd)
             }
+        case "bfReview":
+            // The store's own rating prompt. The web side only sends this from the
+            // parent dashboard, after the grown-ups question (Kids category), 3+
+            // finished quests and 60+ days since the last ask. Apple decides
+            // whether it actually appears.
+            Task { @MainActor in
+                let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                if let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first {
+                    AppStore.requestReview(in: scene)
+                }
+            }
         case "bfTTS":
             guard let dict = message.body as? [String: Any],
                   let cmd = dict["cmd"] as? String else { return }
@@ -447,6 +459,7 @@ struct BrainWebView: UIViewRepresentable {
         ucc.add(bridge, name: "bfStore")
         ucc.add(bridge, name: "bfTTS")
         ucc.add(bridge, name: "bfIAP")
+        ucc.add(bridge, name: "bfReview")
         #if DEBUG
         // Force the trial-expired lock screen for testing (BF_TRIAL_EXPIRED=1 via simctl)
         if ProcessInfo.processInfo.environment["BF_TRIAL_EXPIRED"] != nil {

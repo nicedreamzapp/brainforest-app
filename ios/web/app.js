@@ -886,6 +886,16 @@ function advanceQuest() {
   return STATE.questStep >= STATE.questSteps;
 }
 
+// ---- Rating prompt: count the success moment, ask a grown-up later ----
+// A finished quest is the success moment. Brainforest is a Kids-category app,
+// so the store's rating prompt is never shown to the child: we only count the
+// quest here, and the parent dashboard offers it behind the grown-ups question
+// (parent.html, ratingAsk) once 3+ quests are done on this device, at most once
+// every 60 days. No "do you like us?" screen; the store decides if it shows.
+function noteQuestForRating() {
+  try { kvSet("bf_rate_quests", String(Number(kvGet("bf_rate_quests") || 0) + 1)); } catch (_) {}
+}
+
 async function questFinale() {
   stopFactTicker();
   resetDrift();
@@ -902,6 +912,7 @@ async function questFinale() {
     quests = j.quests_done || 0;
   } catch (e) { console.warn("quest complete failed", e); }
 
+  noteQuestForRating();
   const fin = $("finale");
   if (fin) {
     $("finale-treasure").textContent = treasure ? treasure.emoji : "🏆";
