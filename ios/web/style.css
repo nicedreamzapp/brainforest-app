@@ -2348,7 +2348,7 @@ html.perf-lite .celebrate .big-star, html.perf-lite #celebrate-text { animation-
 /* Explorer level on the home screen */
 .level-card {
   display: flex; align-items: center; gap: 12px;
-  width: min(420px, 92vw); margin: 0 auto 14px; padding: 8px 16px 8px 8px;
+  width: min(420px, 92vw, 100%); margin: 0 auto 14px; padding: 8px 16px 8px 8px;   /* 100%: stay inside the screen's inset padding (Duo cover camera) */
   background: #ffffff; border-radius: 999px;
   box-shadow: 0 4px 0 rgba(107,78,255,0.2), 0 10px 24px rgba(107,78,255,0.12);
   font-family: 'Outfit', system-ui, sans-serif;

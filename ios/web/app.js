@@ -2834,6 +2834,8 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
         setStoreReady(r.loaded);
         const pb = document.getElementById("bf-buy-btn");
         if (pb) pb.textContent = "Unlock forever — " + PRICE;
+        // the card can render before StoreKit answers: keep every price on it the same
+        document.querySelectorAll(".bf-price").forEach((el) => { el.textContent = PRICE; });
       } else if (r.cmd === "buy" && pendingBuy) {
         pendingBuy(r); pendingBuy = null;
       } else if (r.cmd === "restore" && pendingRestore) {
@@ -2871,7 +2873,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
       <div class="ug-card" id="ug-kid">
         <div class="ug-emoji">🌳✨</div>
         <h2>Your free adventure is complete!</h2>
-        <p>You explored Brainforest free for ${TRIAL_DAYS} days.<br>It's only <b>${PRICE}</b> to keep it going <b>forever</b> — ask a grown-up!</p>
+        <p>You explored Brainforest free for ${TRIAL_DAYS} days.<br>It's only <b class="bf-price">${PRICE}</b> to keep it going <b>forever</b> — ask a grown-up!</p>
         <button class="ug-main" id="ug-grownup">I'm a grown-up</button>
         <button class="ug-link${CODES_ON ? "" : " hidden"}" id="ug-code-open">I have a code</button>
       </div>
@@ -2885,7 +2887,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
       <div class="ug-card ug-buy-card hidden" id="ug-buy">
         <img class="ug-key-img" src="img/paywall-key.jpg" alt="">
         <h2 class="ug-buy-title">Brainforest Forever</h2>
-        <p class="ug-buy-sub">It's only <b>${PRICE}</b> to keep it going <b>forever</b>.<br>One time. No subscription. No ads. Ever.</p>
+        <p class="ug-buy-sub">It's only <b class="bf-price">${PRICE}</b> to keep it going <b>forever</b>.<br>One time. No subscription. No ads. Ever.</p>
         <ul class="ug-features">
           <li><span>📚</span><div><b>2,000+ lessons, K–4th grade</b>Math, reading, science &amp; more</div></li>
           <li><span>👧👦</span><div><b>Every kid in your family</b>Their own progress &amp; stickers</div></li>
