@@ -32,6 +32,15 @@
   <button id="switch-kid-btn" class="switch-kid-btn" title="Switch kid">↶ switch kid</button>
   <h1 class="big-title">Hi<span id="welcome-name"></span>!</h1>
   <p class="big-sub">Where do you want to play today?</p>
+  <div id="level-card" class="level-card hidden">
+    <span class="level-badge" id="level-badge" aria-hidden="true">1</span>
+    <div class="level-info">
+      <span class="level-name" id="level-name">Level 1 Explorer</span>
+      <span class="level-xp" id="level-xp"></span>
+      <div class="level-bar" id="level-bar" role="progressbar" aria-labelledby="level-name"
+           aria-valuemin="0" aria-valuemax="100"><span id="level-fill"></span></div>
+    </div>
+  </div>
   <div class="cta-row">
     <button id="path-btn" class="path-cta">🗺️ My Learning Path</button>
     <button id="book-btn" class="path-cta book-cta">🎒 My Sticker Book</button>

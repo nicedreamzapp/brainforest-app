@@ -71,7 +71,7 @@ Object.assign(STATE, {
   } else if (_wantPath) {
     openPath();
   } else {
-    cls($("welcome"), "active", true);
+    showWelcome();
   }
 
   // Init voices early — Chrome populates async
@@ -96,7 +96,13 @@ Object.assign(STATE, {
   $("repeat-btn").addEventListener("click", repeatCurrent);
   $("next-btn").addEventListener("click", advance);
   $("break-btn").addEventListener("click", goHome);
-  $("parent-btn").addEventListener("click", () => { window.location.href = "parent.html"; });
+  // The dashboard holds kid settings (rename, grade, delete) and the rating ask,
+  // so it sits behind the same grown-ups question as the purchase.
+  $("parent-btn").addEventListener("click", async () => {
+    if (await parentGate({ title: "Grown-ups only", text: "Answer this to open the parent dashboard." })) {
+      window.location.href = "parent.html";
+    }
+  });
   const sk = $("switch-kid-btn");
   if (sk) sk.addEventListener("click", switchKid);
 
@@ -107,12 +113,12 @@ Object.assign(STATE, {
   const bbk = $("book-back-btn");
   if (bbk) bbk.addEventListener("click", () => {
     cls($("stickerbook"), "active", false);
-    cls($("welcome"), "active", true);
+    showWelcome();
   });
   const pbk = $("path-back-btn");
   if (pbk) pbk.addEventListener("click", () => {
     cls($("path"), "active", false);
-    cls($("welcome"), "active", true);
+    showWelcome();
   });
 
   // Voice toggle — big playful side button
@@ -133,6 +139,137 @@ Object.assign(STATE, {
     });
   }
 })();
+
+// ---- Grown-ups question (parental gate) ----
+// Kids category: anything a child must not open alone (parent dashboard, the
+// store's rating prompt) sits behind multiplication an adult solves instantly
+// and a K-4 kid can't. Resolves true only on the right answer.
+const PARENT_GATE_QS = [
+  ["What is 7 × 8 + 6?", 62], ["What is 9 × 6 + 7?", 61],
+  ["What is 8 × 6 + 9?", 57], ["What is 7 × 9 + 8?", 71],
+];
+function parentGate(opts = {}) {
+  return new Promise((resolve) => {
+    const old = document.getElementById("parent-gate");
+    if (old && old.__close) old.__close(false);
+    const [q, ans] = PARENT_GATE_QS[Math.floor(Math.random() * PARENT_GATE_QS.length)];
+    const g = document.createElement("div");
+    g.id = "parent-gate";
+    g.className = "modal parent-gate";
+    g.setAttribute("role", "dialog");
+    g.setAttribute("aria-modal", "true");
+    g.setAttribute("aria-labelledby", "pg-title");
+    g.innerHTML = `<div class="modal-card">
+        <h2 id="pg-title"></h2>
+        <p class="pg-text"></p>
+        <p class="pg-q"></p>
+        <input id="pg-answer" type="number" inputmode="numeric" autocomplete="off" aria-label="Answer">
+        <button id="pg-ok">Continue</button>
+        <button id="pg-cancel" class="modal-cancel">back</button>
+      </div>`;
+    g.querySelector("#pg-title").textContent = opts.title || "Grown-ups only";
+    g.querySelector(".pg-text").textContent = opts.text || "Answer this first.";
+    g.querySelector(".pg-q").textContent = q;
+    document.body.appendChild(g);
+    let done = false;
+    g.__close = (ok) => {
+      if (done) return;
+      done = true;
+      g.remove();
+      resolve(!!ok);
+    };
+    const input = g.querySelector("#pg-answer");
+    const check = () => g.__close(input.value.trim() !== "" && Number(input.value) === ans);
+    g.querySelector("#pg-ok").addEventListener("click", (e) => { e.stopPropagation(); check(); });
+    g.querySelector("#pg-cancel").addEventListener("click", (e) => { e.stopPropagation(); g.__close(false); });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); check(); } });
+    g.addEventListener("click", (e) => e.stopPropagation());
+  });
+}
+
+// ---- Back (Android back gesture / button) ----
+// The native shell asks the page first. Anything open closes, a lesson takes a
+// break, the path and sticker book go back to the home screen. Only from the
+// home screen does the shell offer "Leave Brainforest?".
+window.__bfBack = function () {
+  const pg = document.getElementById("parent-gate");
+  if (pg && pg.__close) { pg.__close(false); return "handled"; }
+  const ug = document.getElementById("unlock-gate");
+  if (ug) {
+    if (ug.dataset.dismissible === "1") { ug.remove(); return "handled"; }
+    return "home";        // trial-over card: nothing behind it to go back to
+  }
+  const ak = $("addkid");
+  if (ak && !ak.classList.contains("hidden")) { cls(ak, "hidden", true); return "handled"; }
+  const fin = $("finale");
+  if (fin && !fin.classList.contains("hidden")) { fin.click(); return "handled"; }
+  if ($("lesson").classList.contains("active")) { goHome(); return "handled"; }
+  for (const id of ["path", "stickerbook"]) {
+    if ($(id).classList.contains("active")) { cls($(id), "active", false); showWelcome(); return "handled"; }
+  }
+  // "switch kid" opened the picker over a kid who is still chosen: back returns to her home
+  if ($("kid-picker").classList.contains("active") && STATE.kid) {
+    cls($("kid-picker"), "active", false); showWelcome(); return "handled";
+  }
+  return "home";
+};
+
+// ---- Home screen + explorer level ----
+function showWelcome() {
+  cls($("welcome"), "active", true);
+  renderLevel().catch(e => console.warn("level load failed", e));
+}
+
+// XP comes from what she already earned: one per sticker (every right answer
+// banks one) and ten per finished quest. Level L starts at 10·L·(L-1) XP, so
+// each level asks a little more than the last: 0, 20, 60, 120, 200 ...
+const levelStart = (L) => 10 * L * (L - 1);
+function levelFor(xp) { return Math.max(1, Math.floor((1 + Math.sqrt(1 + 0.4 * Math.max(0, xp))) / 2)); }
+
+async function renderLevel() {
+  const card = $("level-card");
+  if (!card || !STATE.kid) return;
+  const kidAtStart = STATE.kid;
+  const r = await fetch("/api/collection");
+  const d = await r.json();
+  if (d.error || STATE.kid !== kidAtStart) return;
+  const xp = (Number(d.total_stickers) || 0) + 10 * (Number(d.quests_done) || 0);
+  const L = levelFor(xp);
+  const from = levelStart(L), to = levelStart(L + 1);
+  const pct = Math.round(100 * (xp - from) / (to - from));
+  $("level-badge").textContent = String(L);
+  $("level-name").textContent = `Level ${L} Explorer`;
+  $("level-xp").textContent = `${xp - from} / ${to - from} XP`;
+  $("level-fill").style.width = pct + "%";
+  const bar = $("level-bar");
+  bar.setAttribute("aria-valuenow", String(pct));
+  bar.setAttribute("aria-valuetext", `${xp - from} of ${to - from} points to level ${L + 1}`);
+  cls(card, "hidden", false);
+  STATE.level = L; STATE.xp = xp;   // observable for tests
+  // Level-up: celebrate once per new level, per kid. The first time we see a
+  // kid (including kids who played before levels existed) just remember it.
+  const key = "bf_level_" + STATE.kid;
+  const seen = Number(kvGet(key) || 0);
+  kvSet(key, String(L));
+  if (seen && L > seen && $("welcome").classList.contains("active")) levelUpCelebrate(L);
+}
+
+function levelUpCelebrate(L) {
+  STATE.levelUps = (STATE.levelUps || 0) + 1;   // observable for tests
+  const card = $("level-card");
+  if (card) { card.classList.remove("level-up"); void card.offsetWidth; card.classList.add("level-up"); }
+  const ct = $("celebrate-text");
+  ct.style.fontSize = "";
+  ct.textContent = `LEVEL ${L}!`;
+  cls($("celebrate"), "show", true);
+  cls($("celebrate"), "hidden", false);
+  if (window.SFX) SFX.play("fanfare");
+  fireConfetti();
+  setTimeout(() => {
+    cls($("celebrate"), "show", false);
+    cls($("celebrate"), "hidden", true);
+  }, 2200);
+}
 
 // ---- Kid picker ----
 async function buildKidPicker() {
@@ -155,7 +292,7 @@ async function buildKidPicker() {
     btn.setAttribute("aria-label", `${k.name}, ${gradeText}`);
     btn.innerHTML = `
       <span class="kid-emoji" aria-hidden="true">${k.emoji || "🌟"}</span>
-      <span class="kid-name">${k.name}</span>
+      <span class="kid-name">${String(k.name).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c])}</span>
       <span class="kid-grade">${gradeText}</span>
     `;
     btn.addEventListener("click", () => { if (window.SFX) SFX.play("tap"); onPickKid(k.id); });
@@ -213,7 +350,7 @@ async function onPickKid(kidId) {
   STATE.kid = kidId;
   await loadKidState();
   cls($("kid-picker"), "active", false);
-  cls($("welcome"), "active", true);
+  showWelcome();
 }
 
 async function loadKidState() {
@@ -236,6 +373,7 @@ async function loadKidState() {
     STATE.themes = s.themes || STATE.themes;
     STATE.favoriteTheme = s.favorite_theme || STATE.themes[0] || "unicorns";
     STATE.questSteps = s.quest_steps || 8;
+    STATE.savedQuestStep = s.quest_step || 0;   // treehouse climb left off here
     const wn = $("welcome-name");
     if (STATE.name) {
       wn.textContent = " " + STATE.name;
@@ -266,6 +404,8 @@ async function switchKid() {
   cls($("welcome"), "active", false);
   cls($("lesson"), "active", false);
   cls($("kid-picker"), "active", true);
+  const lc = $("level-card");
+  if (lc) cls(lc, "hidden", true);
 }
 
 // ---- Learning Path / world map ----
@@ -647,7 +787,10 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
   STATE.history = [];
   STATE.rightStreak = 0;
   STATE.wrongStreak = 0;
-  STATE.questStep = 0;
+  // Pick the treehouse climb up where she left it (break, closed app, crash).
+  // Saved per kid in the engine after every rung; never resumes on the top rung.
+  const resumeAt = Math.max(0, Math.min(Number(STATE.savedQuestStep) || 0, STATE.questSteps - 1));
+  STATE.questStep = resumeAt;
   STATE.comeback = [];            // missed questions waiting for a re-ask
   $("stickers").innerHTML = "";   // fresh tray each quest (the book keeps them forever)
 
@@ -660,8 +803,10 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
 
   // Show greeting in the bubble immediately (don't wait for TTS)
   const who = STATE.name ? `Hi ${STATE.name}! ` : "Hi! ";
+  const resumeLine = `${who}Welcome back! You're ${resumeAt} of ${STATE.questSteps} steps up the ${themePretty(theme)} treehouse. Keep climbing!`;
   const greet = (focusLabel
     ? `${who}Let's practice ${focusLabel} in the ${themePretty(theme)} world!`
+    : resumeAt > 0 ? resumeLine
     : `${who}A new treehouse quest! Answer ${STATE.questSteps} questions to climb to the top of the ${themePretty(theme)} treehouse!`)
     + streakLine;
   $("said").textContent = greet;
@@ -672,9 +817,10 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
   // own tiny utterance (recorded for known kids, device voice for custom names)
   // while the long sentences are always full Amy recordings.
   speak(spokenGreeting(STATE.name));   // screen still shows the real name
-  speak(focusLabel
-    ? `Let's practice ${focusLabel} in the ${themePretty(theme)} world!`
-    : `A new treehouse quest! Answer ${STATE.questSteps} questions to climb to the top of the ${themePretty(theme)} treehouse!`);
+  // A resumed climb has no recorded line for "you're N steps up", and the app
+  // never switches to a synthesized voice, so that one stays on screen only.
+  if (focusLabel) speak(`Let's practice ${focusLabel} in the ${themePretty(theme)} world!`);
+  else if (!resumeAt) speak(`A new treehouse quest! Answer ${STATE.questSteps} questions to climb to the top of the ${themePretty(theme)} treehouse!`);
   if (streakDays >= 2) speak(`${streakDays} days in a row!`);
   if (bonusTreasure) {
     addSticker(bonusTreasure.emoji);
@@ -884,7 +1030,19 @@ function renderQuestTrail() {
 function advanceQuest() {
   STATE.questStep++;
   renderQuestTrail();
-  return STATE.questStep >= STATE.questSteps;
+  const done = STATE.questStep >= STATE.questSteps;
+  saveQuestStep(done ? 0 : STATE.questStep);
+  return done;
+}
+
+// Every rung is saved the moment it is climbed, so a break, a closed app or a
+// crash all come back to the same spot. Per kid (engine prefs).
+function saveQuestStep(n) {
+  STATE.savedQuestStep = n;
+  fetch("/api/pref", {
+    method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({ quest_step: String(n) }),
+  }).catch(() => {});
 }
 
 // ---- Rating prompt: count the success moment, ask a grown-up later ----
@@ -895,6 +1053,34 @@ function advanceQuest() {
 // every 60 days. No "do you like us?" screen; the store decides if it shows.
 function noteQuestForRating() {
   try { kvSet("bf_rate_quests", String(Number(kvGet("bf_rate_quests") || 0) + 1)); } catch (_) {}
+}
+
+// Right after a finished quest (the success moment) a small "Grown-ups?" link
+// sits under the treasure. It opens the grown-ups question, and only a right
+// answer hands over to the store's own rating prompt (StoreKit / Play In-App
+// Review). Same limits as the parent dashboard ask: 3+ quests on this device,
+// at most once every 60 days, nothing offered in return, no bridge = no link.
+function offerRatingAtFinale(fin) {
+  const old = fin.querySelector(".finale-grownups");
+  if (old) old.remove();
+  const bridge = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bfReview;
+  if (!bridge) return;
+  const quests = Number(kvGet("bf_rate_quests") || 0);
+  const last = Number(kvGet("bf_rate_last") || 0);
+  if (quests < 3 || Date.now() - last < 60 * 86400e3) return;
+  const b = document.createElement("button");
+  b.className = "finale-grownups";
+  b.textContent = "Grown-ups?";
+  b.setAttribute("aria-label", "For grown-ups: rate Brainforest");
+  b.addEventListener("click", async (e) => {
+    e.stopPropagation();          // never counts as "tap anywhere to keep going"
+    kvSet("bf_rate_last", String(Date.now()));
+    b.remove();
+    const ok = await parentGate({ title: "For grown-ups", text: "Would you rate Brainforest? Answer this first." });
+    if (ok) { try { bridge.postMessage({ cmd: "ask" }); } catch (_) {} }
+  });
+  const card = fin.querySelector(".finale-card") || fin;
+  card.appendChild(b);
 }
 
 async function questFinale() {
@@ -928,6 +1114,7 @@ async function questFinale() {
       cls(fin, "hidden", true);
       goHome();
     };
+    offerRatingAtFinale(fin);
   }
   if (window.SFX) SFX.play("finale");
   fireConfetti();
@@ -963,7 +1150,8 @@ async function openStickerBook() {
 
   const counts = document.createElement("p");
   counts.className = "book-counts";
-  counts.textContent = `${data.total_stickers || 0} stickers · ${data.quests_done || 0} quests finished`;
+  const ns = data.total_stickers || 0, nq = data.quests_done || 0;
+  counts.textContent = `${ns} ${ns === 1 ? "sticker" : "stickers"} · ${nq} ${nq === 1 ? "quest" : "quests"} finished`;
   body.appendChild(counts);
 
   const th = document.createElement("h2");
@@ -988,6 +1176,11 @@ async function openStickerBook() {
   });
   body.appendChild(tg);
 
+  if (Array.isArray(data.albums) && data.albums.length) {
+    renderAlbums(body, data.albums);
+    return;
+  }
+
   const sh = document.createElement("h2");
   sh.className = "book-section-title";
   sh.textContent = "✨ Stickers";
@@ -1008,6 +1201,47 @@ async function openStickerBook() {
     sg.appendChild(card);
   });
   body.appendChild(sg);
+}
+
+// One album per world: every sticker slot is shown, the ones she hasn't found
+// yet as a "?" so there is always something left to collect. Albums she has
+// started come first.
+const ALBUM_NAMES = { unicorns: "Unicorns", mermaids: "Mermaids", dinos: "Dinosaurs", space: "Space",
+  cats: "Cats", horses: "Horses", bluey: "Puppies", default: "Bonus" };
+function renderAlbums(body, albums) {
+  const sh = document.createElement("h2");
+  sh.className = "book-section-title";
+  sh.textContent = "✨ Sticker Albums";
+  body.appendChild(sh);
+  const fav = STATE.favoriteTheme;
+  albums.slice().sort((a, b) => (b.owned - a.owned) || ((b.theme === fav) - (a.theme === fav)))
+    .forEach(a => {
+      const sec = document.createElement("section");
+      sec.className = "album";
+      const h = document.createElement("h3");
+      h.className = "album-title";
+      h.innerHTML = `<span aria-hidden="true">${a.emoji}</span> <span></span> <span class="album-count"></span>`;
+      h.children[1].textContent = ALBUM_NAMES[a.theme] || a.theme;
+      h.children[2].textContent = `${a.owned} of ${a.total}`;
+      sec.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "book-grid album-grid";
+      a.items.forEach(it => {
+        const c = document.createElement("div");
+        if (it.count > 0) {
+          c.className = "book-card slot";
+          c.innerHTML = `<span class="book-emoji">${it.item}</span>` +
+            (it.count > 1 ? `<span class="book-count">×${it.count}</span>` : "");
+        } else {
+          c.className = "book-card slot slot-empty";
+          c.setAttribute("aria-label", "Not found yet");
+          c.innerHTML = `<span class="book-emoji" aria-hidden="true">?</span>`;
+        }
+        grid.appendChild(c);
+      });
+      sec.appendChild(grid);
+      body.appendChild(sec);
+    });
 }
 
 // ---- Activity loop ----
@@ -1153,14 +1387,29 @@ const WORD_EMOJI = {
   music:"🎵", song:"🎶", dance:"💃", game:"🎮", toy:"🧸", gift:"🎁", party:"🎉",
 };
 
+// Exact whole words only. The old prefix match put a shark on "What's in the
+// night sky?" (the "s" of what's), an airplane on "planet" and a dog on "do".
+// A wrong picture is worse than none, so: words of 4+ letters (a plain plural
+// of one counts), a lone short word like "cat" only when it is the whole text,
+// and no picture at all when two different pictures tie.
 function findWordIcon(text) {
   if (!text) return null;
-  const lower = text.toLowerCase();
-  // Try exact words first, then substring fallback.
-  const words = lower.match(/\b[a-z]+\b/g) || [];
-  for (const w of words) if (WORD_EMOJI[w]) return WORD_EMOJI[w];
-  for (const w of words) for (const k in WORD_EMOJI) if (w.startsWith(k) || k.startsWith(w)) return WORD_EMOJI[k];
-  return null;
+  const words = String(text).toLowerCase().match(/[a-z]+/g) || [];
+  if (words.length === 1 && WORD_EMOJI[words[0]]) return WORD_EMOJI[words[0]];
+  const hits = new Map();
+  for (const w of words) {
+    if (w.length < 4) continue;
+    const base = WORD_EMOJI[w] ? w
+      : (w.endsWith("s") && w.length - 1 >= 4 && WORD_EMOJI[w.slice(0, -1)]) ? w.slice(0, -1)
+      : null;
+    if (!base) continue;
+    const icon = WORD_EMOJI[base];
+    hits.set(icon, (hits.get(icon) || 0) + 1);
+  }
+  if (!hits.size) return null;
+  const ranked = [...hits.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) return null;   // unsure
+  return ranked[0][0];
 }
 
 // Draw a kid-friendly analog clock (teaching style: long blue minute hand,
@@ -1668,7 +1917,9 @@ function setupTrace(box) {
   // canvas pixel is one CSS pixel and the ink lands exactly under the finger.
   canvas.width = box.clientWidth; canvas.height = box.clientHeight;
   const ctx = canvas.getContext("2d");
-  const pen = () => { ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.strokeStyle = "#1fa06b"; };
+  // The line grows with the box so a bigger letter (tablet) still takes a
+  // finger-wide stroke, never thinner than 14px.
+  const pen = () => { ctx.lineWidth = Math.max(14, Math.round(canvas.width * 0.047)); ctx.lineCap = "round"; ctx.strokeStyle = "#1fa06b"; };
   pen();
   // The box changes size when the window does (fold/unfold, rotate, split).
   // Match the canvas to it and carry the kid's stroke over, scaled, so the ink
@@ -1691,6 +1942,7 @@ function setupTrace(box) {
     return {x: t.clientX - r.left, y: t.clientY - r.top};
   };
   const start = (e) => { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
+  let misses = 0;
   const move = (e) => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasDrawn = true; if (doneBtn.disabled) doneBtn.disabled = false; e.preventDefault(); };
   const end = () => { drawing = false; };
   canvas.addEventListener("mousedown", start);
@@ -1709,14 +1961,100 @@ function setupTrace(box) {
   doneBtn.disabled = true;
   let traceFired = false;
   doneBtn.addEventListener("click", () => {
-    if (!hasDrawn || traceFired) return;
+    if (!hasDrawn || traceFired || STATE.grading) return;
+    // The ink has to follow the letter: most of the letter covered, and most
+    // of the ink on or near it. A single slash or a scribble over the whole
+    // box doesn't count. Forgiving on purpose: the ink is checked with a wide
+    // margin around the letter, and after a few tries a good-enough trace passes.
+    const m = traceCoverage(box, canvas);
+    STATE.lastTrace = m;   // observable for tests
+    const good = m.coverage >= 0.65 && m.precision >= 0.6;
+    const goodEnough = misses >= 2 && m.coverage >= 0.6 && m.precision >= 0.5;
+    if (!good && !goodEnough) {
+      misses++;
+      setBubbleFeedback("Keep going! Trace the whole letter, then tap Done.");
+      speakNow("Take your time and try again.");
+      return;
+    }
     traceFired = true;
     doneBtn.disabled = true;
     onTraceDone();
   });
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "trace-clear";
+  clearBtn.textContent = "Start over";
+  clearBtn.addEventListener("click", () => {
+    if (traceFired) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawn = false;
+    doneBtn.disabled = true;
+  });
+  wrap.appendChild(clearBtn);
   wrap.appendChild(doneBtn);
   box.parentNode.insertBefore(wrap, box.nextSibling);
 }
+// How well the ink follows the letter. Draws the same letter the kid sees (same
+// font, size and spot as the ghost) into an offscreen canvas, then compares the
+// two on a coarse grid. coverage: share of the letter with ink near it.
+// precision: share of the ink that is on or near the letter.
+function traceCoverage(box, canvas) {
+  const ghost = box.querySelector(".ghost");
+  const text = ghost ? ghost.textContent.trim() : "";
+  const W = canvas.width, H = canvas.height;
+  if (!text || !W || !H) return { coverage: 1, precision: 1 };
+  const cr = canvas.getBoundingClientRect();
+  const range = document.createRange();
+  range.selectNodeContents(ghost);
+  const rr = range.getBoundingClientRect();
+  const sx = W / (cr.width || W), sy = H / (cr.height || H);
+  const off = document.createElement("canvas");
+  off.width = W; off.height = H;
+  const g = off.getContext("2d");
+  const cs = getComputedStyle(ghost);
+  g.setTransform(sx, 0, 0, sy, 0, 0);
+  g.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  g.textBaseline = "alphabetic";
+  g.textAlign = "left";
+  const tm = g.measureText(text);
+  const asc = tm.fontBoundingBoxAscent || tm.actualBoundingBoxAscent || parseFloat(cs.fontSize) * 0.8;
+  const desc = tm.fontBoundingBoxDescent || tm.actualBoundingBoxDescent || parseFloat(cs.fontSize) * 0.2;
+  const baseline = (rr.top - cr.top) + (rr.height - (asc + desc)) / 2 + asc;
+  g.fillStyle = "#000";
+  g.fillText(text, (rr.left - cr.left) + (rr.width - tm.width) / 2, baseline);
+  const CELL = Math.max(6, Math.round(Math.min(W, H) / 38));   // ~8px on a phone, scales with the box
+  const cw = Math.ceil(W / CELL), ch = Math.ceil(H / CELL);
+  const grid = (data) => {
+    const out = new Uint8Array(cw * ch);
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+      if (data[(y * W + x) * 4 + 3] > 40) out[((y / CELL) | 0) * cw + ((x / CELL) | 0)] = 1;
+    }
+    return out;
+  };
+  const letter = grid(g.getImageData(0, 0, W, H).data);
+  const ink = grid(canvas.getContext("2d").getImageData(0, 0, W, H).data);
+  const near = (src, r) => {
+    const out = new Uint8Array(cw * ch);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      if (!src[y * cw + x]) continue;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        const yy = y + dy, xx = x + dx;
+        if (yy >= 0 && yy < ch && xx >= 0 && xx < cw) out[yy * cw + xx] = 1;
+      }
+    }
+    return out;
+  };
+  // One cell of slack around the ink (a finger is wider than the line it
+  // leaves), two around the letter for "is this ink on the letter at all".
+  const inkNear = near(ink, 1), letterNear = near(letter, 2);
+  let L = 0, Lhit = 0, I = 0, Ihit = 0;
+  for (let i = 0; i < cw * ch; i++) {
+    if (letter[i]) { L++; if (inkNear[i]) Lhit++; }
+    if (ink[i]) { I++; if (letterNear[i]) Ihit++; }
+  }
+  if (!L) return { coverage: 1, precision: 1 };   // couldn't draw the letter: don't block her
+  return { coverage: Lhit / L, precision: I ? Ihit / I : 0 };
+}
+
 function onTraceDone() {
   if (STATE.grading) return;
   STATE.grading = true;  // claim the gate now, before the 600ms beat
@@ -2412,9 +2750,12 @@ async function goHome() {
   STATE.prefetched = null;
   STATE.focusSkill = null;
   STATE.focusLabel = "";
+  if ($("lesson").classList.contains("active") && STATE.questStep < STATE.questSteps) {
+    saveQuestStep(STATE.questStep);
+  }
   cls($("lesson"), "active", false);
-  cls($("welcome"), "active", true);
   document.body.className = "";
+  showWelcome();
 }
 
 function advance() { nextActivity(); }
@@ -2512,6 +2853,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) endSe
     if (document.getElementById("unlock-gate")) return;
     const g = document.createElement("div");
     g.id = "unlock-gate";
+    if (opts.dismissible) g.dataset.dismissible = "1";
     g.innerHTML = `
       <div class="ug-card" id="ug-kid">
         <div class="ug-emoji">🌳✨</div>

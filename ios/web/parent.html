@@ -74,12 +74,61 @@
     padding: 10px 18px; cursor: pointer; border: 1px solid rgba(127,232,177,0.5); }
   .rate-ok { background: #7fe8b1; color: #14181c; }
   .rate-no { background: transparent; color: #7fe8b1; }
+
+  /* Kid settings: rename, change grade, delete */
+  .ke-label { display: block; font-size: 12px; color: #aab8b1; text-transform: uppercase; letter-spacing: 0.6px; margin: 10px 0 6px; }
+  #ke-name { width: 100%; font-size: 18px; padding: 10px 12px; border-radius: 10px; font-family: inherit;
+    border: 1px solid rgba(255,255,255,0.3); background: #14181c; color: #fff; }
+  .ke-grades { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ke-grade { flex: 1 1 0; min-width: 48px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    padding: 10px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: #f5f7f6; }
+  .ke-grade.sel { background: #ffffff; color: #14181c; border-color: #ffffff; }
+  .ke-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .ke-row button, .ke-confirm button { font-family: inherit; font-size: 15px; font-weight: 700; border-radius: 999px;
+    padding: 10px 18px; cursor: pointer; }
+  .ke-save { background: #7fe8b1; color: #14181c; border: 1px solid #7fe8b1; }
+  .ke-up { background: transparent; color: #7fe8b1; border: 1px solid rgba(127,232,177,0.5); }
+  .ke-del { background: transparent; color: #ff9b9b; border: 1px solid rgba(255,155,155,0.5); margin-left: auto; }
+  .ke-msg { font-size: 13px; color: #cfd8d3; margin: 10px 0 0; min-height: 1em; }
+  .ke-confirm { margin-top: 12px; padding: 12px; border-radius: 12px; background: rgba(255,120,120,0.10);
+    border: 1px solid rgba(255,155,155,0.4); }
+  .ke-confirm p { margin: 0 0 10px; font-size: 14px; color: #ffe1e1; }
+  .ke-confirm .ke-keep { background: #ffffff; color: #14181c; border: 1px solid #ffffff; }
+  .ke-confirm .ke-gone { background: #c62828; color: #ffffff; border: 1px solid #c62828; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 <h1>🌳 Brainforest · Parent Dashboard</h1>
 <p class="sub" id="sub">Loading…</p>
 <div class="kid-tabs" id="kid-tabs"></div>
+
+<div class="card hidden" id="kid-edit">
+  <h3>Kid settings</h3>
+  <label class="ke-label" for="ke-name">Name</label>
+  <input id="ke-name" type="text" maxlength="20" autocomplete="off">
+  <span class="ke-label" id="ke-grade-label">Grade</span>
+  <div class="ke-grades" id="ke-grades" role="group" aria-labelledby="ke-grade-label">
+    <button class="ke-grade" data-grade="0" aria-label="Kindergarten">K</button>
+    <button class="ke-grade" data-grade="1" aria-label="First grade">1st</button>
+    <button class="ke-grade" data-grade="2" aria-label="Second grade">2nd</button>
+    <button class="ke-grade" data-grade="3" aria-label="Third grade">3rd</button>
+    <button class="ke-grade" data-grade="4" aria-label="Fourth grade">4th</button>
+  </div>
+  <div class="ke-row">
+    <button class="ke-save" id="ke-save">Save changes</button>
+    <button class="ke-up" id="ke-up">Move up a grade</button>
+    <button class="ke-del" id="ke-del">Delete kid</button>
+  </div>
+  <p class="ke-msg" id="ke-msg" role="status">Stickers, treasures and progress stay when you rename or change grade.</p>
+  <div class="ke-confirm hidden" id="ke-confirm">
+    <p id="ke-confirm-text"></p>
+    <div class="ke-row" style="margin-top:0">
+      <button class="ke-keep" id="ke-keep">Keep</button>
+      <button class="ke-gone" id="ke-gone">Delete forever</button>
+    </div>
+  </div>
+</div>
 
 <div class="card"><div class="kpis" id="kpis"></div></div>
 
@@ -124,7 +173,84 @@ async function buildTabs() {
   document.getElementById("sub").textContent = cur
     ? `Showing ${cur.name}. Tap another kid to switch. Everything is stored on this phone only.`
     : "No kids yet — add one in the app first.";
+  fillKidEdit(cur);
 }
+
+// ---- Kid settings: rename, change grade ("move up a grade"), delete ----
+let EDIT_KID = null, EDIT_GRADE = null;
+const GRADE_WORD = ["kindergarten", "1st grade", "2nd grade", "3rd grade", "4th grade"];
+function fillKidEdit(kid) {
+  const card = document.getElementById("kid-edit");
+  EDIT_KID = kid || null;
+  card.classList.toggle("hidden", !kid);
+  document.getElementById("ke-confirm").classList.add("hidden");
+  if (!kid) return;
+  document.getElementById("ke-name").value = kid.name;
+  setEditGrade(kid.grade);
+}
+function setEditGrade(g) {
+  EDIT_GRADE = g;
+  document.querySelectorAll(".ke-grade").forEach(b => {
+    const on = Number(b.dataset.grade) === g;
+    b.classList.toggle("sel", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const up = document.getElementById("ke-up");
+  up.classList.toggle("hidden", !EDIT_KID || EDIT_KID.grade >= 4);
+  if (EDIT_KID && EDIT_KID.grade < 4) up.textContent = `Move up to ${GRADE_WORD[EDIT_KID.grade + 1]}`;
+}
+const keMsg = (t) => { document.getElementById("ke-msg").textContent = t; };
+async function saveKid(changes) {
+  if (!EDIT_KID) return;
+  const r = await fetch("/api/kid/update", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: EDIT_KID.id }, changes)) });
+  const j = await r.json();
+  if (!j.ok) { keMsg(j.error === "name required" ? "Type a name first." : "Couldn't save that. Try again."); return; }
+  await buildTabs(); await load();
+  keMsg(`Saved. ${j.kid.name} is in ${GRADE_WORD[j.kid.grade]}. Stickers and progress are all still there.`);
+}
+document.querySelectorAll(".ke-grade").forEach(b =>
+  b.addEventListener("click", () => setEditGrade(Number(b.dataset.grade))));
+document.getElementById("ke-save").addEventListener("click", () =>
+  saveKid({ name: document.getElementById("ke-name").value.trim(), grade: EDIT_GRADE }));
+document.getElementById("ke-up").addEventListener("click", () => {
+  if (EDIT_KID && EDIT_KID.grade < 4) saveKid({ grade: EDIT_KID.grade + 1 });
+});
+document.getElementById("ke-del").addEventListener("click", () => {
+  if (!EDIT_KID) return;
+  document.getElementById("ke-confirm-text").textContent =
+    `Delete ${EDIT_KID.name} and all of their stickers, treasures and progress? This can't be undone.`;
+  document.getElementById("ke-confirm").classList.remove("hidden");
+});
+document.getElementById("ke-keep").addEventListener("click", () =>
+  document.getElementById("ke-confirm").classList.add("hidden"));
+document.getElementById("ke-gone").addEventListener("click", async () => {
+  if (!EDIT_KID) return;
+  const name = EDIT_KID.name;
+  const r = await fetch("/api/kid/delete", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: EDIT_KID.id }) });
+  const j = await r.json();
+  if (!j.ok) { keMsg("Couldn't delete. Try again."); return; }
+  kvSet("kid", j.kid || "");
+  await buildTabs(); await load();
+  keMsg(`${name} was deleted.`);
+  if (!j.kid) {
+    document.getElementById("kpis").innerHTML = "";
+    document.getElementById("mastery-list").innerHTML = '<p class="empty">No kids yet.</p>';
+    document.getElementById("sessions-list").innerHTML = '<p class="empty">No sessions yet.</p>';
+  }
+});
+
+// Android back: close the delete question if it is open, otherwise go back
+// into the app (never out of it).
+window.__bfBack = function () {
+  const c = document.getElementById("ke-confirm");
+  if (c && !c.classList.contains("hidden")) { c.classList.add("hidden"); return "handled"; }
+  const g = document.getElementById("rate-gate");
+  if (g) { g.remove(); return "handled"; }
+  location.href = "index.html";
+  return "handled";
+};
 
 const SKILL_NAMES = {
   math_count: "Counting", math_add: "Adding", math_sub: "Taking Away", math_groups: "Groups Of",

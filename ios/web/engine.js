@@ -99,16 +99,19 @@
   }
 
   // ---- Collection pools (port of STICKER_POOLS + TREASURES) ----
+  // 32 stickers per world. The first six of each are the original pools, so
+  // every sticker a kid already earned still has its slot in the book.
   const STICKER_POOLS = {
-    unicorns: ["🦄", "🌈", "✨", "🌸", "🪄", "💖"],
-    mermaids: ["🧜‍♀️", "🐚", "🐬", "🫧", "⭐", "🪸"],
-    dinos:    ["🦕", "🦖", "🌋", "🥚", "🦴", "🌿"],
-    space:    ["🚀", "🌟", "🪐", "👩‍🚀", "☄️", "🌙"],
-    cats:     ["🐱", "🐾", "🧶", "🐟", "😺", "🎀"],
-    horses:   ["🐴", "🍎", "🏇", "🌾", "🥕", "🐎"],
-    bluey:    ["🐶", "🦴", "🎾", "🏠", "💙", "🧡"],
-    default:  ["⭐", "✨", "🌈", "🎉", "💎", "🏅"],
+    unicorns: ["🦄", "🌈", "✨", "🌸", "🪄", "💖", "🌟", "🎀", "👑", "🍭", "🧁", "🦋", "🌷", "💎", "🔮", "🏰", "🌙", "⭐", "🍬", "🎠", "🌺", "💫", "🍓", "🎈", "🌼", "💜", "🧚", "🍰", "🌻", "🍩", "🌠", "🎆"],
+    mermaids: ["🧜‍♀️", "🐚", "🐬", "🫧", "⭐", "🪸", "🐠", "🐟", "🐡", "🦀", "🐙", "🦑", "🐳", "🐋", "🌊", "🏝️", "🦞", "🦈", "🐢", "⚓", "💎", "🧜‍♂️", "🐧", "🔱", "🏖️", "⛵", "🌅", "🦐", "🌴", "🦩", "🧭", "💧"],
+    dinos:    ["🦕", "🦖", "🌋", "🥚", "🦴", "🌿", "🐊", "🦎", "🐢", "🐍", "🌴", "🌵", "🍃", "🌳", "☄️", "🐉", "🐲", "🌾", "🍂", "🔥", "🏔️", "⛰️", "🐾", "🍄", "🌺", "🌲", "🌞", "🦂", "🕷️", "⚡", "🗿", "🔍"],
+    space:    ["🚀", "🌟", "🪐", "👩‍🚀", "☄️", "🌙", "🌍", "🌎", "🌏", "🌞", "🌝", "🌛", "🌜", "⭐", "✨", "💫", "🌠", "🛸", "🛰️", "🔭", "👽", "🌌", "🌑", "🌕", "🌗", "👨‍🚀", "🌒", "🌖", "📡", "🤖", "🎇", "🌘"],
+    cats:     ["🐱", "🐾", "🧶", "🐟", "😺", "🎀", "😸", "😹", "😻", "😼", "😽", "🙀", "🐈", "🐭", "🐁", "🥛", "🧀", "🐦", "🦋", "🍣", "🐠", "📦", "🧸", "💤", "🐯", "🦁", "🐆", "🎾", "🌼", "🏠", "🛋️", "🌙"],
+    horses:   ["🐴", "🍎", "🏇", "🌾", "🥕", "🐎", "🦄", "🐮", "🐄", "🐑", "🐐", "🐓", "🐔", "🐷", "🐇", "🌻", "🍏", "🥇", "🏆", "🎠", "🚜", "🏡", "🌳", "🍀", "🐕", "🌽", "🧺", "🍓", "👢", "🤠", "🌈", "🌄"],
+    bluey:    ["🐶", "🦴", "🎾", "🏠", "💙", "🧡", "🐕", "🐩", "🦮", "🐾", "🥏", "🧸", "🎈", "🛁", "🧼", "🍖", "🐿️", "🌳", "⚽", "🏀", "🚗", "🌭", "🍪", "🛏️", "🐈", "🐦", "🦆", "🌞", "💤", "🎁", "🧦", "🎉"],
+    default:  ["⭐", "✨", "🌈", "🎉", "💎", "🏅", "🎊", "🎈", "🎁", "🏆", "🥇", "🌟", "💫", "🍀", "🌻", "🌸", "🍭", "🧁", "🍩", "🎨", "🎵", "🎶", "🚲", "⚽", "🧩", "🪁", "🎯", "🎪", "🎡", "🎢", "🏵️", "🍦"],
   };
+
   const TREASURES = [
     ["🗝️", "Golden Key"], ["💎", "Rainbow Gem"], ["👑", "Royal Crown"],
     ["🏆", "Champion Cup"], ["🧭", "Explorer Compass"], ["🪄", "Magic Wand"],
@@ -383,7 +386,12 @@
 
   function awardSticker(kid, theme) {
     const pool = STICKER_POOLS[theme || ""] || STICKER_POOLS.default;
-    const item = choice(pool);
+    // Lean toward stickers she doesn't have yet so every album fills up, but
+    // keep some repeats: a double is still a sticker.
+    const owned = new Set(kidDB(kid).collection
+      .filter(c => c.kind === "sticker" && (c.theme || null) === (theme || null)).map(c => c.item));
+    const fresh = pool.filter(x => !owned.has(x));
+    const item = fresh.length && Math.random() < 0.7 ? choice(fresh) : choice(pool);
     kidDB(kid).collection.push({ ts: nowISO(), kind: "sticker", item, name: null, theme: theme || null });
     persist();
     return item;
@@ -414,7 +422,23 @@
     const treasures = Object.values(tMap).sort((a, b) => (a.ts < b.ts ? 1 : -1))
       .map(t => ({ emoji: t.emoji, name: t.name, count: t.count }));
     const total_stickers = col.filter(c => c.kind === "sticker").length;
-    return { stickers, treasures, total_stickers };
+    // One album per world, every slot listed (count 0 = an empty "?" slot).
+    const byTheme = {};
+    for (const c of col) if (c.kind === "sticker") {
+      const t = STICKER_POOLS[c.theme] ? c.theme : "default";
+      const m = byTheme[t] || (byTheme[t] = {});
+      m[c.item] = (m[c.item] || 0) + 1;
+    }
+    const albums = THEMES.concat(["default"]).map(t => {
+      const have = byTheme[t] || {};
+      const pool = STICKER_POOLS[t];
+      // stickers from an older pool that no longer has a slot still show up
+      const extra = Object.keys(have).filter(x => pool.indexOf(x) < 0);
+      const items = pool.concat(extra).map(item => ({ item, count: have[item] || 0 }));
+      return { theme: t, emoji: THEME_EMOJI[t] || "⭐", items,
+               owned: items.filter(x => x.count > 0).length, total: items.length };
+    }).filter(a => a.theme !== "default" || a.owned > 0);
+    return { stickers, treasures, total_stickers, albums };
   }
 
   // ---- Tier caps content filter (port of _within_caps) ----
@@ -670,6 +694,46 @@
                                   emoji: kid.emoji, color: kid.color, tutor_name: kid.tutor_name } });
     },
 
+    // Parent dashboard: rename a kid or move them to another grade. Stickers,
+    // treasures, mastery and sessions all stay; only the profile changes.
+    "POST /api/kid/update": async (body) => {
+      body = body || {};
+      const p = profiles().find(x => x.id === String(body.id || ""));
+      if (!p) return J({ error: "no such kid" }, 404);
+      const oldName = p.display;
+      if (body.name !== undefined) {
+        const name = String(body.name || "").trim().slice(0, 20);
+        if (!name) return J({ error: "name required" }, 400);
+        p.display = name;
+      }
+      if (body.grade !== undefined) {
+        const g = Number(body.grade);
+        if (!Number.isInteger(g) || g < 0 || g > 4) return J({ error: "bad grade" }, 400);
+        p.grade = g;
+        p.age = 5 + g;
+      }
+      const kid = kidFromProfile(p);
+      const db = STORE.kids[p.id] || (STORE.kids[p.id] = blankKidDB(kid));
+      // The greeting name follows a rename unless it was set to something else.
+      if (!db.prefs.name || db.prefs.name === oldName) db.prefs.name = p.display;
+      persist(true);
+      return J({ ok: true, kid: { id: p.id, name: kid.display, grade: kid.grade, grade_label: kid.grade_label,
+                                  emoji: kid.emoji, color: kid.color, tutor_name: kid.tutor_name } });
+    },
+
+    // Parent dashboard: remove a kid and everything they earned (asked twice first).
+    "POST /api/kid/delete": async (body) => {
+      const id = String((body || {}).id || "");
+      const list = profiles();
+      const i = list.findIndex(x => x.id === id);
+      if (i < 0) return J({ error: "no such kid" }, 404);
+      list.splice(i, 1);
+      delete STORE.kids[id];
+      if (String(BFKV.get("kid") || "") === id) STORE.kv.kid = list[0] ? list[0].id : "";
+      persist(true);
+      return J({ ok: true, kid: STORE.kv.kid || null });
+    },
+
     "GET /api/state": async () => {
       const kid = currentKid();
       let themes;
@@ -685,6 +749,8 @@
         model: "on-device",
         activity_seconds: kid.activity_seconds,
         quest_steps: kid.quest_steps,
+        // How far up the treehouse she got before a break or closing the app.
+        quest_step: Number(getPref(kid, "quest_step", "0")) || 0,
       });
     },
 
@@ -937,7 +1003,7 @@
       const handler = routes[method + " " + path];
       if (!handler) return Promise.resolve(J({ error: "no such route: " + method + " " + path }, 404));
       // Routes that need an active kid fail cleanly when no profiles exist yet.
-      const kidFree = new Set(["/api/kids", "/api/kid/create", "/api/health", "/api/grade", "/api/say", "/api/say/stop"]);
+      const kidFree = new Set(["/api/kids", "/api/kid/create", "/api/kid/update", "/api/kid/delete", "/api/health", "/api/grade", "/api/say", "/api/say/stop"]);
       if (!kidFree.has(path) && !currentKid()) {
         return Promise.resolve(J({ error: "no kids yet" }, 409));
       }
