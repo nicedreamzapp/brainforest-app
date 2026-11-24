@@ -2,23 +2,66 @@
 
 **An offline learning adventure for K–4 kids.** Quests, reading, and voiced lessons — all on-device, no ads, no accounts, no internet required.
 
+Brainforest is a kids' learning app for iPhone, iPad and Android: a child answers narrated math, reading and science questions to climb a treehouse, and all progress stays on the device.
+
 [![Download on the App Store](https://img.shields.io/badge/Download_on_the-App_Store-0D96F6?style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/us/app/id6788301765) [![Get it on Google Play](https://img.shields.io/badge/Get_it_on-Google_Play-01875f?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.brainforest.app)
 
-This repo holds both platforms, cleanly separated:
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-banner-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-banner-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-banner.svg" width="100%" alt="01. What ships. Numbers from the shipping app"></picture>
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-r1-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-r1-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-r1.svg" width="100%" alt="2,039 activities across grades K–4. 726 &quot;Did you know?&quot; facts. 7 quest themes."></picture>
 
-## 📱 iOS
+**Also in the box:** a parent dashboard, and a 60-day free trial followed by a one-time $1.99 unlock (no subscription).
 
-The SwiftUI app, web content, art, and build tooling. Full source in [`ios/`](ios/).
+Content lives in [`ios/web/content/`](ios/web/content/).
 
-**Status:** ✅ [Live on the App Store](https://apps.apple.com/us/app/id6788301765).
+<img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s01-rule.svg" width="100%" alt="">
 
-## 🤖 Android
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-banner-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-banner-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-banner.svg" width="100%" alt="02. Two platforms. This repo holds both, cleanly separated"></picture>
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-r1-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-r1-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-r1.svg" width="100%" alt="iOS. SwiftUI app. Live on the App Store. Version 1.4 (build 19). Android. WebView shell around the same lessons, voice pack bundled. Live on Google Play. Version 1.7 (versionCode 9)."></picture>
 
-The Android port — a WebView shell around the same lessons, with the full voice pack bundled. Source in [`android/`](android/).
+**iOS:** the SwiftUI app, web content, art, and build tooling. Full source in [`ios/`](ios/).
 
-**Status:** ✅ [Live on Google Play](https://play.google.com/store/apps/details?id=com.brainforest.app). The code is available now in [`android/`](android/).
+**Status:** ✅ [Live on the App Store](https://apps.apple.com/us/app/id6788301765). Project version 1.4 (build 19).
 
-## Links
+**Android:** the Android port, a WebView shell around the same lessons, with a voice pack bundled. Source in [`android/`](android/).
+
+**Status:** ✅ [Live on Google Play](https://play.google.com/store/apps/details?id=com.brainforest.app). Project version 1.7 (versionCode 9).
+
+<img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s02-rule.svg" width="100%" alt="">
+
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s03-banner-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s03-banner-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s03-banner.svg" width="100%" alt="03. What I built. Built by Matt Macosko"></picture>
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/main/assets/readme/s03-r1-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/main/assets/readme/s03-r1-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/main/assets/readme/s03-r1.svg" width="100%" alt="Learning engine. Adaptive difficulty and per-skill mastery tracking. Content pipeline. Math generated by code; the rest written, then auto-checked. Tests. The real engine in Node: soak runs, garbage input, corrupted-save recovery."></picture>
+
+**Built by Matt Macosko.** The main parts, each linked to its file:
+
+- **Learning engine** ([`ios/web/engine.js`](ios/web/engine.js)): adaptive difficulty and per-skill mastery tracking.
+- **Game UI** ([`ios/web/app.js`](ios/web/app.js), [`parent.html`](ios/web/parent.html)): quests, stickers, treasures, missed questions coming back for another try, trial and unlock screens, parent dashboard.
+- **iOS shell** ([`BrainforestApp.swift`](ios/Brainforest/BrainforestApp.swift)): WKWebView host with bridges for on-device storage, recorded narration, and StoreKit 2 purchases.
+- **Android shell** ([`MainActivity.kt`](android/app/src/main/java/com/brainforest/app/MainActivity.kt)): runs the same web app unchanged by mapping the iOS bridges onto Android, with Google Play Billing for the unlock.
+- **Content pipeline** ([`generate_content.py`](ios/tools/generate_content.py), [`judge_content.py`](ios/tools/judge_content.py), [`enrich_banks.py`](ios/tools/enrich_banks.py)): math questions generated by code; reading, science and social questions written and then checked by Claude through the `claude` CLI (upstream).
+- **Voice pack** ([`build_voice_pack_kokoro.py`](ios/tools/build_voice_pack_kokoro.py), [`verify_voice_coverage.py`](ios/tools/verify_voice_coverage.py)): lists every line the app can speak, records it with the upstream Kokoro-82M model (older [Piper builder](ios/tools/build_voice_pack.py) also kept), and checks every line has a clip.
+- **Tests** ([`sim_engine.mjs`](ios/tests/sim_engine.mjs), [`sim_torture.mjs`](ios/tests/sim_torture.mjs)): run the real engine in Node, including long soak runs, garbage input and corrupted-save recovery.
+
+<img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s03-rule.svg" width="100%" alt="">
+
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s04-banner-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s04-banner-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s04-banner.svg" width="100%" alt="04. Running it. Tests, iOS and Android"></picture>
+
+- **Engine tests** (Node only): `node ios/tests/sim_engine.mjs` and `node ios/tests/sim_torture.mjs`.
+- **iOS:** open `ios/Brainforest.xcodeproj` in Xcode (iOS 17+). The scheme uses `ios/Brainforest.storekit` for local purchase testing.
+- **Android:** `cd android && ./gradlew assembleDebug` (JDK 17, Android SDK 36). Release builds need your own `android/keystore.properties`, which is not committed.
+
+<img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s04-rule.svg" width="100%" alt="">
+
+<picture><source media="(max-width: 610px), (min-width: 768px) and (max-width: 895px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s05-banner-m.svg"><source media="(max-width: 1149px)" srcset="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s05-banner-mid.svg"><img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s05-banner.svg" width="100%" alt="05. Known limits and links. What to expect from a clean checkout"></picture>
+
+- **The iOS voice pack is not in the repo** (`ios/web/voice/` is gitignored). The app has no robot-voice fallback on purpose, so a fresh iOS build is silent until you generate the pack.
+- **The voice tools expect the author's machine:** they call a Python venv at `~/JaneOS/.venv`, and the content scripts read from `~/Documents/Brainforest`. They will not run as-is on a clean checkout.
+- **This repo's Android voice pack is older than the shipping app.** Running `verify_voice_coverage.py` against the pack committed here finds 1,374 of 7,175 spoken lines with no clip. The Google Play build (1.7) and the iOS build tree carry the full pack and pass the same check with every line covered.
+- **Two copies of the web app:** `ios/web/` and `android/app/src/main/assets/web/` are identical today, but there is no sync script in the repo.
+
+**Links**
 
 - Product page: https://nicedreamzwholesale.com/software/brainforest/
+- Privacy: [`PRIVACY.md`](PRIVACY.md)
 - Questions or bugs? **info@nicedreamzwholesale.com**
+
+<img src="https://raw.githubusercontent.com/nicedreamzapp/brainforest-app/9841878d6a2c4334a5d19606b9dcf9471e569afc/assets/readme/s05-rule.svg" width="100%" alt="">
