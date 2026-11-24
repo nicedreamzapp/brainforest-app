@@ -373,7 +373,8 @@ async function loadKidState() {
     STATE.themes = s.themes || STATE.themes;
     STATE.favoriteTheme = s.favorite_theme || STATE.themes[0] || "unicorns";
     STATE.questSteps = s.quest_steps || 8;
-    STATE.savedQuestStep = s.quest_step || 0;   // treehouse climb left off here
+    STATE.savedQuestStep = s.quest_step || 0;   // treehouse climb left off here...
+    STATE.savedQuestWorld = s.quest_world || ""; // ...and in which world
     const wn = $("welcome-name");
     if (STATE.name) {
       wn.textContent = " " + STATE.name;
@@ -789,7 +790,10 @@ async function onPickTheme(theme, focusSkill = null, focusLabel = "") {
   STATE.wrongStreak = 0;
   // Pick the treehouse climb up where she left it (break, closed app, crash).
   // Saved per kid in the engine after every rung; never resumes on the top rung.
-  const resumeAt = Math.max(0, Math.min(Number(STATE.savedQuestStep) || 0, STATE.questSteps - 1));
+  // Only a normal quest in the same world resumes; practice (a path island)
+  // always starts fresh and never touches the saved climb.
+  const resumeAt = (focusSkill || STATE.savedQuestWorld !== theme) ? 0
+    : Math.max(0, Math.min(Number(STATE.savedQuestStep) || 0, STATE.questSteps - 1));
   STATE.questStep = resumeAt;
   STATE.comeback = [];            // missed questions waiting for a re-ask
   $("stickers").innerHTML = "";   // fresh tray each quest (the book keeps them forever)
@@ -1031,17 +1035,19 @@ function advanceQuest() {
   STATE.questStep++;
   renderQuestTrail();
   const done = STATE.questStep >= STATE.questSteps;
-  saveQuestStep(done ? 0 : STATE.questStep);
+  if (!STATE.focusSkill) saveQuestStep(done ? 0 : STATE.questStep);
   return done;
 }
 
 // Every rung is saved the moment it is climbed, so a break, a closed app or a
 // crash all come back to the same spot. Per kid (engine prefs).
 function saveQuestStep(n) {
+  const world = n ? STATE.theme : "";
   STATE.savedQuestStep = n;
+  STATE.savedQuestWorld = world;
   fetch("/api/pref", {
     method: "POST", headers: {"content-type": "application/json"},
-    body: JSON.stringify({ quest_step: String(n) }),
+    body: JSON.stringify({ quest_step: String(n), quest_world: world }),
   }).catch(() => {});
 }
 
@@ -1968,8 +1974,9 @@ function setupTrace(box) {
     // margin around the letter, and after a few tries a good-enough trace passes.
     const m = traceCoverage(box, canvas);
     STATE.lastTrace = m;   // observable for tests
-    const good = m.coverage >= 0.65 && m.precision >= 0.6;
-    const goodEnough = misses >= 2 && m.coverage >= 0.6 && m.precision >= 0.5;
+    const notScribble = m.inkRatio <= INK_CAP;
+    const good = notScribble && m.coverage >= 0.68 && m.precision >= 0.6;
+    const goodEnough = notScribble && misses >= 2 && m.coverage >= 0.63 && m.precision >= 0.5;
     if (!good && !goodEnough) {
       misses++;
       setBubbleFeedback("Keep going! Trace the whole letter, then tap Done.");
@@ -1997,6 +2004,10 @@ function setupTrace(box) {
 // font, size and spot as the ghost) into an offscreen canvas, then compares the
 // two on a coarse grid. coverage: share of the letter with ink near it.
 // precision: share of the ink that is on or near the letter.
+// Ink cells / letter cells. Careful traces (centred or ~25px off) measured
+// 0.42-0.61 across A E G K M O Q R S W at 375/390/1024; a spiral or zigzag
+// over the letter 0.71-1.11. Above this it is colouring in, not tracing.
+const INK_CAP = 0.72;
 function traceCoverage(box, canvas) {
   const ghost = box.querySelector(".ghost");
   const text = ghost ? ghost.textContent.trim() : "";
@@ -2043,16 +2054,19 @@ function traceCoverage(box, canvas) {
     }
     return out;
   };
-  // One cell of slack around the ink (a finger is wider than the line it
-  // leaves), two around the letter for "is this ink on the letter at all".
-  const inkNear = near(ink, 1), letterNear = near(letter, 2);
+  // Two cells of slack around the ink (a finger is wider than the line it
+  // leaves, and a careful trace can sit ~25px off the middle of a stroke),
+  // two around the letter for "is this ink on the letter at all".
+  const inkNear = near(ink, 2), letterNear = near(letter, 2);
   let L = 0, Lhit = 0, I = 0, Ihit = 0;
   for (let i = 0; i < cw * ch; i++) {
     if (letter[i]) { L++; if (inkNear[i]) Lhit++; }
     if (ink[i]) { I++; if (letterNear[i]) Ihit++; }
   }
-  if (!L) return { coverage: 1, precision: 1 };   // couldn't draw the letter: don't block her
-  return { coverage: Lhit / L, precision: I ? Ihit / I : 0 };
+  if (!L) return { coverage: 1, precision: 1, inkRatio: 0 };   // couldn't draw the letter: don't block her
+  // inkRatio: how much ink for the size of the letter. Tracing lays down about
+  // one letter's worth or less; colouring in the whole letter area is far more.
+  return { coverage: Lhit / L, precision: I ? Ihit / I : 0, inkRatio: I / L };
 }
 
 function onTraceDone() {
@@ -2750,9 +2764,8 @@ async function goHome() {
   STATE.prefetched = null;
   STATE.focusSkill = null;
   STATE.focusLabel = "";
-  if ($("lesson").classList.contains("active") && STATE.questStep < STATE.questSteps) {
-    saveQuestStep(STATE.questStep);
-  }
+  // The climb is already saved at every rung (advanceQuest). Not saving here
+  // means peeking into another world and leaving keeps the climb she had.
   cls($("lesson"), "active", false);
   document.body.className = "";
   showWelcome();

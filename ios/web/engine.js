@@ -728,7 +728,10 @@
       const i = list.findIndex(x => x.id === id);
       if (i < 0) return J({ error: "no such kid" }, 404);
       list.splice(i, 1);
-      delete STORE.kids[id];
+      delete STORE.kids[id];               // prefs incl. the saved treehouse climb
+      for (const k of Object.keys(STORE.kv)) {   // per-kid keys (explorer level seen, ...)
+        if (k.endsWith("_" + id)) delete STORE.kv[k];
+      }
       if (String(BFKV.get("kid") || "") === id) STORE.kv.kid = list[0] ? list[0].id : "";
       persist(true);
       return J({ ok: true, kid: STORE.kv.kid || null });
@@ -751,6 +754,7 @@
         quest_steps: kid.quest_steps,
         // How far up the treehouse she got before a break or closing the app.
         quest_step: Number(getPref(kid, "quest_step", "0")) || 0,
+        quest_world: getPref(kid, "quest_world", "") || "",
       });
     },
 
